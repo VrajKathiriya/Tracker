@@ -20,6 +20,7 @@ import {
   fetchProjectMilestones, 
   fetchJobApplications 
 } from '@/lib/storage';
+import { ensureSupabaseConfig } from '@/lib/supabase';
 
 import { 
   StudySession, 
@@ -47,6 +48,7 @@ export default function Home() {
 
   const loadData = useCallback(async () => {
     try {
+      await ensureSupabaseConfig();
       const [
         loadedSessions,
         loadedProblems,

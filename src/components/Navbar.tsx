@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, ensureSupabaseConfig } from '@/lib/supabase';
 import { SupabaseModal } from './SupabaseModal';
 
 export type ActiveTab = 
@@ -44,7 +44,9 @@ export function Navbar({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    setSupabaseConnected(isSupabaseConfigured());
+    ensureSupabaseConfig().then(() => {
+      setSupabaseConnected(isSupabaseConfigured());
+    });
   }, []);
 
   const getPhaseName = (week: number) => {

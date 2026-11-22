@@ -37,7 +37,7 @@ export function RoadmapGatesView({ gates, onRefresh, currentWeek }: RoadmapGates
   return (
     <div className="space-y-6">
       {/* 3 Gates Checkpoint Section */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 space-y-4">
         <div>
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -57,9 +57,9 @@ export function RoadmapGatesView({ gates, onRefresh, currentWeek }: RoadmapGates
             return (
               <div
                 key={gate.id}
-                className={`rounded-2xl border p-5 flex flex-col justify-between transition-all ${
+                className={`rounded-xl border p-5 flex flex-col justify-between transition-all ${
                   allPassed
-                    ? 'bg-emerald-950/20 border-emerald-600/50 shadow-lg shadow-emerald-500/10'
+                    ? 'bg-emerald-950/20 border-emerald-600/50-500/10'
                     : 'bg-zinc-950/80 border-zinc-800'
                 }`}
               >
@@ -116,7 +116,7 @@ export function RoadmapGatesView({ gates, onRefresh, currentWeek }: RoadmapGates
       </div>
 
       {/* 4 Phases & 44-Week Breakdown Table */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
             <Calendar className="w-4 h-4 text-indigo-400" />
@@ -141,7 +141,7 @@ export function RoadmapGatesView({ gates, onRefresh, currentWeek }: RoadmapGates
                 key={phase.phase}
                 className={`p-4 rounded-xl border text-xs space-y-3 ${
                   isCurrent
-                    ? 'bg-indigo-950/20 border-indigo-500/60 shadow-md shadow-indigo-500/10'
+                    ? 'bg-indigo-950/20 border-indigo-500/60-500/10'
                     : 'bg-zinc-950/60 border-zinc-850'
                 }`}
               >
@@ -201,7 +201,7 @@ export function RoadmapGatesView({ gates, onRefresh, currentWeek }: RoadmapGates
       </div>
 
       {/* 5 Core Roadmap Rules */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6">
         <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider mb-3">
           The 5 Inviolable Rules of the Roadmap
         </h3>

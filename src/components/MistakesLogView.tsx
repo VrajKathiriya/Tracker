@@ -133,7 +133,7 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
     <div className="space-y-6">
       {/* Roadmap Rule #2 Spaced Repetition Notification Banner */}
       {(due7dProblems.length > 0 || due30dProblems.length > 0) && (
-        <div className="bg-gradient-to-r from-amber-950/40 via-orange-950/40 to-zinc-900 border border-amber-700/50 rounded-2xl p-5 shadow-xl">
+        <div className="bg-gradient-to-r from-amber-950/40 via-orange-950/40 to-zinc-900 border border-amber-700/50 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <span className="p-1 rounded-lg bg-amber-500/20 text-amber-400">
               <RotateCw className="w-4 h-4 animate-spin-slow" />
@@ -202,7 +202,7 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
       )}
 
       {/* Overview Stats & Action Bar */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
           <div>
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
@@ -216,7 +216,7 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md shadow-indigo-600/30 transition self-start sm:self-auto"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition self-start sm:self-auto cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Log Solved Problem
           </button>
@@ -290,7 +290,7 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
       </div>
 
       {/* Problems List */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
         {filteredProblems.length === 0 ? (
           <div className="text-center py-12 text-zinc-500 text-xs">
             {problems.length === 0 
@@ -393,7 +393,7 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
       {/* Add Problem Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 shadow-2xl text-zinc-100">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 text-zinc-100">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 text-indigo-400" /> Log Solved Problem &amp; Mistake
@@ -518,7 +518,7 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-md shadow-indigo-600/30"
+                  className="px-4 py-2 rounded-lg font-medium text-xs text-white bg-indigo-600 hover:bg-indigo-500 transition cursor-pointer"
                 >
                   {isSubmitting ? 'Saving...' : 'Add Problem to Queue'}
                 </button>

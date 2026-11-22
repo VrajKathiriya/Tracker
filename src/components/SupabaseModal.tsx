@@ -51,7 +51,7 @@ export function SupabaseModal({ isOpen, onClose }: SupabaseModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl text-zinc-100">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 text-zinc-100">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -160,7 +160,7 @@ export function SupabaseModal({ isOpen, onClose }: SupabaseModalProps) {
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30"
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition flex items-center gap-1.5-600/30"
             >
               {savedSuccess ? (
                 <>

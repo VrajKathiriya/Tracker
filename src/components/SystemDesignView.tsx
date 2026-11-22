@@ -93,7 +93,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
   return (
     <div className="space-y-6">
       {/* Header and Stats */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
           <div>
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
@@ -107,7 +107,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md shadow-blue-600/30 transition self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs-600/30 transition self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" /> Log Design Session
           </button>
@@ -141,7 +141,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
       </div>
 
       {/* Suggested Systems Checklist from Roadmap */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
         <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider mb-3 flex items-center gap-2">
           <ListOrdered className="w-4 h-4 text-indigo-400" />
           <span>Roadmap Target Systems Checklist</span>
@@ -180,7 +180,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
       </div>
 
       {/* Practice Log History */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
         <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider mb-3">
           Completed Design Sessions ({logs.length})
         </h3>
@@ -232,7 +232,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl text-zinc-100">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg p-6 text-zinc-100">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-400" /> Log System Design / LLD Practice
@@ -334,7 +334,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-500 transition shadow-md shadow-blue-600/30"
+                  className="px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-600/30"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Design Log'}
                 </button>

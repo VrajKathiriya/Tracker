@@ -63,7 +63,7 @@ export function ProjectsView({ projects, onRefresh }: ProjectsViewProps) {
   return (
     <div className="space-y-6">
       {/* Intro Banner */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <Rocket className="w-5 h-5" />
@@ -116,7 +116,7 @@ export function ProjectsView({ projects, onRefresh }: ProjectsViewProps) {
           return (
             <div
               key={proj.id}
-              className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-4"
+              className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 relative overflow-hidden space-y-4"
             >
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-800">

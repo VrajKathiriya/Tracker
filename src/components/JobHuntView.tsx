@@ -107,7 +107,7 @@ export function JobHuntView({ applications, onRefresh }: JobHuntViewProps) {
   return (
     <div className="space-y-6">
       {/* Intro Banner */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-zinc-800">
           <div>
             <div className="flex items-center gap-2">
@@ -123,7 +123,7 @@ export function JobHuntView({ applications, onRefresh }: JobHuntViewProps) {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md shadow-indigo-600/30 transition self-start sm:self-auto"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs-600/30 transition self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" /> Add Company Application
           </button>
@@ -148,7 +148,7 @@ export function JobHuntView({ applications, onRefresh }: JobHuntViewProps) {
 
       {/* Target Companies Quick-Add Suggestions */}
       {applications.length === 0 && (
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
           <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider mb-3">
             Suggested Target Companies from Roadmap
           </h3>
@@ -178,7 +178,7 @@ export function JobHuntView({ applications, onRefresh }: JobHuntViewProps) {
       )}
 
       {/* Pipeline List */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
         <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider mb-4 flex items-center justify-between">
           <span>Active Applications ({applications.length})</span>
           <span className="text-zinc-500 font-normal">Target: 30-40 Companies</span>
@@ -267,7 +267,7 @@ export function JobHuntView({ applications, onRefresh }: JobHuntViewProps) {
       {/* Add Application Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl text-zinc-100">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg p-6 text-zinc-100">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-indigo-400" /> Add Target Company / Application
@@ -393,7 +393,7 @@ export function JobHuntView({ applications, onRefresh }: JobHuntViewProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-md shadow-indigo-600/30"
+                  className="px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-600/30"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Application'}
                 </button>

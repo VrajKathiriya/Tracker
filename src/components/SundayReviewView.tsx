@@ -78,7 +78,7 @@ export function SundayReviewView({ reviews, onRefresh, currentWeek }: SundayRevi
   return (
     <div className="space-y-6">
       {/* Sunday Ritual Banner */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <CalendarCheck className="w-5 h-5" />
@@ -117,7 +117,7 @@ export function SundayReviewView({ reviews, onRefresh, currentWeek }: SundayRevi
       </div>
 
       {/* Input Form for Selected Week */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
           <h3 className="text-sm font-semibold text-white">
             Week {selectedWeek} Performance Check-in
@@ -218,7 +218,7 @@ export function SundayReviewView({ reviews, onRefresh, currentWeek }: SundayRevi
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-md shadow-indigo-600/30 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-600/30 flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               {savedSuccess ? 'Saved Successfully!' : isSubmitting ? 'Saving...' : 'Save Weekly Review'}
@@ -229,7 +229,7 @@ export function SundayReviewView({ reviews, onRefresh, currentWeek }: SundayRevi
 
       {/* Past Reviews Log */}
       {reviews.length > 0 && (
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-6">
           <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider mb-4">
             Past Sunday Check-ins
           </h3>

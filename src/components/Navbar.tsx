@@ -76,7 +76,7 @@ export function Navbar({
           <div className="flex items-center justify-between h-16">
             {/* Logo and Target */}
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 font-bold text-white text-base">
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-white text-xs">
                 10M
               </div>
               <div>
@@ -145,8 +145,8 @@ export function Navbar({
                   onClick={() => onTabChange(item.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                      ? 'bg-zinc-800 text-white border border-zinc-700'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
                   }`}
                 >
                   {item.icon}

@@ -125,9 +125,9 @@ export function ActivityCalendar({
 
   const getIntensityClass = (minutes: number) => {
     const hours = minutes / 60;
-    if (hours >= 6.5) return 'bg-emerald-500 text-zinc-950 font-bold shadow-md shadow-emerald-500/20';
-    if (hours >= 4) return 'bg-emerald-600/70 text-emerald-100 font-semibold';
-    if (hours >= 2) return 'bg-emerald-700/50 text-emerald-200 font-medium';
+    if (hours >= 6.5) return 'bg-emerald-500 text-zinc-950 font-semibold';
+    if (hours >= 4) return 'bg-emerald-600/70 text-emerald-100 font-medium';
+    if (hours >= 2) return 'bg-emerald-700/50 text-emerald-200';
     if (hours > 0) return 'bg-emerald-900/40 text-emerald-300';
     return '';
   };
@@ -159,7 +159,7 @@ export function ActivityCalendar({
   return (
     <div className="space-y-4">
       {/* Calendar Card (LeetCode Style) */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-xl text-zinc-100">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5 text-zinc-100">
         {/* Month Navigation */}
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
           <div className="flex items-center gap-1.5">
@@ -223,9 +223,9 @@ export function ActivityCalendar({
               <button
                 key={dateStr}
                 onClick={() => onSelectDate(dateStr)}
-                className={`h-9 rounded-xl flex flex-col items-center justify-center transition-all relative text-xs cursor-pointer ${
+                className={`h-9 rounded-lg flex flex-col items-center justify-center transition-colors relative text-xs cursor-pointer ${
                   isSelected
-                    ? 'ring-2 ring-emerald-400 bg-zinc-800 font-bold text-white shadow-lg shadow-emerald-500/20'
+                    ? 'ring-1 ring-emerald-400 bg-zinc-800 font-semibold text-white'
                     : intensityClass
                       ? intensityClass
                       : isPast
@@ -278,7 +278,7 @@ export function ActivityCalendar({
       </div>
 
       {/* Selected Day Details Inspector */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5 space-y-3.5">
         <div className="flex items-center justify-between pb-2.5 border-b border-zinc-800">
           <div>
             <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold">

@@ -78,6 +78,16 @@ export async function saveStudySession(session: Omit<StudySession, 'id' | 'creat
   return newSession;
 }
 
+export async function updateStudySession(session: StudySession): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    await supabase.from('study_sessions').update(session).eq('id', session.id);
+  }
+  const existing = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
+  const updated = existing.map(s => s.id === session.id ? session : s);
+  setLocal(LOCAL_STORAGE_KEYS.SESSIONS, updated);
+}
+
 export async function deleteStudySession(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {

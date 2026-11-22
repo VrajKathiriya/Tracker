@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -23,29 +23,35 @@ interface HoursAnalyticsProps {
 }
 
 export function HoursAnalytics({ sessions, onSessionDeleted, currentWeek }: HoursAnalyticsProps) {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const currentDayOfWeek = new Date().getDay(); // 0 is Sunday, 6 is Saturday
+  const [todayStr, setTodayStr] = useState<string>('');
+  const [currentDayOfWeek, setCurrentDayOfWeek] = useState<number>(1);
+  const [monday, setMonday] = useState<Date | null>(null);
+
+  React.useEffect(() => {
+    const now = new Date();
+    setTodayStr(now.toISOString().split('T')[0]);
+    const d = now.getDay();
+    setCurrentDayOfWeek(d);
+    const diff = now.getDate() - d + (d === 0 ? -6 : 1);
+    const mon = new Date(now.setDate(diff));
+    mon.setHours(0, 0, 0, 0);
+    setMonday(mon);
+  }, []);
 
   // Daily target: Sunday = 2.5h, Weekday = 6.5h, Saturday = 6.5h
   const dailyTargetHours = currentDayOfWeek === 0 ? 2.5 : 6.5;
 
   // 1. Calculate Today's Hours
-  const todaySessions = sessions.filter(s => s.session_date === todayStr);
+  const todaySessions = todayStr ? sessions.filter(s => s.session_date === todayStr) : [];
   const todayMinutes = todaySessions.reduce((acc, s) => acc + s.duration_minutes, 0);
   const todayHours = todayMinutes / 60;
   const todayProgressPercent = Math.min(100, (todayHours / dailyTargetHours) * 100);
 
   // 2. Calculate This Week's Hours (Monday to Sunday)
-  const now = new Date();
-  const day = now.getDay();
-  const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diffToMonday));
-  monday.setHours(0, 0, 0, 0);
-
-  const thisWeekSessions = sessions.filter(s => {
+  const thisWeekSessions = monday ? sessions.filter(s => {
     const sessionDate = new Date(s.session_date);
     return sessionDate >= monday;
-  });
+  }) : [];
 
   const weekMinutes = thisWeekSessions.reduce((acc, s) => acc + s.duration_minutes, 0);
   const weekHours = weekMinutes / 60;
@@ -53,8 +59,8 @@ export function HoursAnalytics({ sessions, onSessionDeleted, currentWeek }: Hour
   const weekProgressPercent = Math.min(100, (weekHours / weeklyTarget) * 100);
 
   // 3. Calculate This Month's Hours
-  const currentMonthStr = todayStr.substring(0, 7); // YYYY-MM
-  const monthSessions = sessions.filter(s => s.session_date.startsWith(currentMonthStr));
+  const currentMonthStr = todayStr ? todayStr.substring(0, 7) : ''; // YYYY-MM
+  const monthSessions = currentMonthStr ? sessions.filter(s => s.session_date.startsWith(currentMonthStr)) : [];
   const monthMinutes = monthSessions.reduce((acc, s) => acc + s.duration_minutes, 0);
   const monthHours = monthMinutes / 60;
   const monthlyTarget = 160;

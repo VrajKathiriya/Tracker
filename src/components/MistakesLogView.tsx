@@ -39,10 +39,15 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
   const [solveStatus, setSolveStatus] = useState<ProblemSolveStatus>('with_hints');
   const [timeTaken, setTimeTaken] = useState<number>(30);
   const [mistakeNotes, setMistakeNotes] = useState('');
-  const [solvedDate, setSolvedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [solvedDate, setSolvedDate] = useState('');
+  const [todayStr, setTodayStr] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  React.useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setSolvedDate(today);
+    setTodayStr(today);
+  }, []);
 
   // Calculate Due For Review items (7-Day and 30-Day Spaced Repetition)
   const due7dProblems = problems.filter(

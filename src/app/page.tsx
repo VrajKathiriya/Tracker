@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar, ActiveTab } from '@/components/Navbar';
 import { ActiveTimer } from '@/components/ActiveTimer';
 import { HoursAnalytics } from '@/components/HoursAnalytics';
+import { ActivityCalendar } from '@/components/ActivityCalendar';
 import { MistakesLogView } from '@/components/MistakesLogView';
 import { SystemDesignView } from '@/components/SystemDesignView';
 import { ProjectsView } from '@/components/ProjectsView';
@@ -35,6 +36,7 @@ import {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('timer');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Application Data States
@@ -82,6 +84,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    setSelectedDate(new Date().toISOString().split('T')[0]);
     loadData();
     // Load persisted week preference
     const savedWeek = localStorage.getItem('tracker_current_week');
@@ -119,13 +122,23 @@ export default function Home() {
         ) : (
           <div className="space-y-6 animate-fadeIn">
             {activeTab === 'timer' && (
-              <div className="space-y-6">
-                <ActiveTimer onSessionLogged={loadData} />
-                <HoursAnalytics
-                  sessions={sessions}
-                  onSessionDeleted={loadData}
-                  currentWeek={currentWeek}
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="lg:col-span-7 space-y-6">
+                  <ActiveTimer onSessionLogged={loadData} />
+                  <HoursAnalytics
+                    sessions={sessions}
+                    onSessionDeleted={loadData}
+                    currentWeek={currentWeek}
+                  />
+                </div>
+                <div className="lg:col-span-5 space-y-6">
+                  <ActivityCalendar
+                    sessions={sessions}
+                    selectedDate={selectedDate}
+                    onSelectDate={setSelectedDate}
+                    onSessionDeleted={loadData}
+                  />
+                </div>
               </div>
             )}
 

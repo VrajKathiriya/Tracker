@@ -5,151 +5,101 @@ import {
   Play, 
   Pause, 
   RotateCcw, 
-  Plus, 
   Check, 
   Clock, 
   Flame, 
-  Sparkles,
-  BookOpen,
-  Layers,
-  Bot,
-  RotateCw
+  Sparkles, 
+  Layers, 
+  Bot, 
+  RotateCw,
+  X
 } from 'lucide-react';
 import { DAILY_BLOCKS, DailyBlockConfig } from '@/lib/roadmap-data';
-import { StudyCategory } from '@/lib/types';
-import { saveStudySession } from '@/lib/storage';
+import { StudyCategory, StudySession } from '@/lib/types';
+import { saveStudySession, updateStudySession } from '@/lib/storage';
 
 interface ActiveTimerProps {
   onSessionLogged: () => void;
 }
 
-const TIMER_STORAGE_KEY = 'roadmap_active_timer_state_v1';
+const STOPWATCH_STORAGE_KEY = 'roadmap_stopwatch_state_v2';
 
-interface PersistedTimerState {
+interface PersistedStopwatchState {
   blockNumber: 1 | 2 | 3 | 4;
-  mode: 'countdown' | 'stopwatch';
-  targetMinutes: number;
   isActive: boolean;
-  isPaused: boolean;
-  startTimestamp: number | null;
+  startTimestamp: number | null; // Date.now() when started/resumed
   accumulatedSeconds: number;
 }
 
 export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
-  // Timer States
   const [selectedBlock, setSelectedBlock] = useState<DailyBlockConfig>(DAILY_BLOCKS[0]);
-  const [mode, setMode] = useState<'countdown' | 'stopwatch'>('countdown');
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(DAILY_BLOCKS[0].targetMinutes * 60);
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
-  const [isLogModalOpen, setIsLogModalOpen] = useState<boolean>(false);
 
-  // Form State for logging
-  const [category, setCategory] = useState<StudyCategory>('dsa');
-  const [logMinutes, setLogMinutes] = useState<number>(DAILY_BLOCKS[0].targetMinutes);
-  const [sessionTitle, setSessionTitle] = useState<string>('');
-  const [sessionNotes, setSessionNotes] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  // Notes Modal State (pops up on pause when session is auto-logged)
+  const [justLoggedSession, setJustLoggedSession] = useState<StudySession | null>(null);
+  const [notesInput, setNotesInput] = useState<string>('');
+  const [isSavingNotes, setIsSavingNotes] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const timerStateRef = useRef<PersistedTimerState | null>(null);
+  const stopwatchStateRef = useRef<PersistedStopwatchState | null>(null);
 
-  // Play beep sound using Web Audio API
-  const playBeep = () => {
-    try {
-      const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.8);
-    } catch {
-      // AudioContext may be restricted before user gesture
-    }
-  };
-
-  // Helper to persist timer state
-  const saveTimerToStorage = (state: PersistedTimerState | null) => {
-    timerStateRef.current = state;
+  // Save to localStorage
+  const saveStopwatchToStorage = (state: PersistedStopwatchState | null) => {
+    stopwatchStateRef.current = state;
     if (typeof window === 'undefined') return;
     if (!state) {
-      localStorage.removeItem(TIMER_STORAGE_KEY);
+      localStorage.removeItem(STOPWATCH_STORAGE_KEY);
     } else {
-      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STOPWATCH_STORAGE_KEY, JSON.stringify(state));
     }
   };
 
-  // Calculate and sync current time based on wall clock
-  const syncTimerFromState = useCallback((state: PersistedTimerState) => {
+  // Sync elapsed seconds from wall-clock time
+  const syncFromState = useCallback((state: PersistedStopwatchState) => {
     const now = Date.now();
-    const elapsedSinceStart = (state.isActive && !state.isPaused && state.startTimestamp) 
+    const elapsedSinceStart = (state.isActive && state.startTimestamp) 
       ? Math.floor((now - state.startTimestamp) / 1000) 
       : 0;
-    const totalElapsed = state.accumulatedSeconds + elapsedSinceStart;
-
-    if (state.mode === 'countdown') {
-      const targetSec = state.targetMinutes * 60;
-      const remaining = Math.max(0, targetSec - totalElapsed);
-      setSecondsRemaining(remaining);
-      setSecondsElapsed(totalElapsed);
-
-      if (remaining <= 0 && state.isActive && !state.isPaused) {
-        // Countdown reached 0
-        playBeep();
-        setIsActive(false);
-        saveTimerToStorage(null);
-        openLogModal(state.targetMinutes);
-        return;
-      }
-    } else {
-      setSecondsElapsed(totalElapsed);
-    }
-
-    setIsActive(state.isActive && !state.isPaused);
+    const total = state.accumulatedSeconds + elapsedSinceStart;
+    setSecondsElapsed(total);
+    setIsActive(state.isActive);
   }, []);
 
-  // Restore on mount from localStorage
+  // Restore on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const raw = localStorage.getItem(TIMER_STORAGE_KEY);
+    const raw = localStorage.getItem(STOPWATCH_STORAGE_KEY);
     if (raw) {
       try {
-        const parsed: PersistedTimerState = JSON.parse(raw);
-        timerStateRef.current = parsed;
+        const parsed: PersistedStopwatchState = JSON.parse(raw);
+        stopwatchStateRef.current = parsed;
         const block = DAILY_BLOCKS.find((b) => b.blockNumber === parsed.blockNumber) || DAILY_BLOCKS[0];
         setSelectedBlock(block);
-        setMode(parsed.mode);
-        setCategory(block.category);
-        setLogMinutes(parsed.targetMinutes);
-        syncTimerFromState(parsed);
+        syncFromState(parsed);
       } catch (err) {
-        console.error('Failed to parse saved timer state:', err);
+        console.error('Failed to parse stopwatch state:', err);
       }
     }
-  }, [syncTimerFromState]);
+  }, [syncFromState]);
 
   // Handle visibility change (tab refocus)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && timerStateRef.current) {
-        syncTimerFromState(timerStateRef.current);
+      if (document.visibilityState === 'visible' && stopwatchStateRef.current) {
+        syncFromState(stopwatchStateRef.current);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [syncTimerFromState]);
+  }, [syncFromState]);
 
-  // Main tick loop
+  // Tick loop
   useEffect(() => {
     if (isActive) {
       timerRef.current = setInterval(() => {
-        if (timerStateRef.current) {
-          syncTimerFromState(timerStateRef.current);
+        if (stopwatchStateRef.current) {
+          syncFromState(stopwatchStateRef.current);
         }
       }, 1000);
     } else {
@@ -159,152 +109,125 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, syncTimerFromState]);
+  }, [isActive, syncFromState]);
 
-  // Update browser tab title with active countdown/timer
+  // Update browser tab title
   useEffect(() => {
     if (!isActive) {
       document.title = '10-Month SDE & Applied AI Roadmap Tracker';
       return;
     }
 
-    const displaySec = mode === 'countdown' ? secondsRemaining : secondsElapsed;
-    const h = Math.floor(displaySec / 3600);
-    const m = Math.floor((displaySec % 3600) / 60);
-    const s = displaySec % 60;
+    const h = Math.floor(secondsElapsed / 3600);
+    const m = Math.floor((secondsElapsed % 3600) / 60);
+    const s = secondsElapsed % 60;
     const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     document.title = `(${timeStr}) Block ${selectedBlock.blockNumber}: ${selectedBlock.title.replace(`Block ${selectedBlock.blockNumber}: `, '')} - Tracker`;
 
     return () => {
       document.title = '10-Month SDE & Applied AI Roadmap Tracker';
     };
-  }, [isActive, mode, secondsRemaining, secondsElapsed, selectedBlock]);
+  }, [isActive, secondsElapsed, selectedBlock]);
 
-  // Switch block preset
+  // Switch active block
   const handleSelectBlock = (block: DailyBlockConfig) => {
-    if (isActive && !confirm('Switching block will reset the current timer. Continue?')) {
-      return;
+    if (isActive) {
+      if (!confirm('You have a stopwatch running. Switching block will pause & save this session. Continue?')) {
+        return;
+      }
+      handlePauseAndLog();
     }
-    saveTimerToStorage(null);
     setSelectedBlock(block);
-    setCategory(block.category);
-    setLogMinutes(block.targetMinutes);
-    setIsActive(false);
     setSecondsElapsed(0);
-    setSecondsRemaining(block.targetMinutes * 60);
+    saveStopwatchToStorage(null);
   };
 
-  const toggleTimer = () => {
+  // Start stopwatch
+  const handleStart = () => {
     const now = Date.now();
+    const existing = stopwatchStateRef.current;
+    const accum = existing ? existing.accumulatedSeconds : secondsElapsed;
 
-    if (!isActive) {
-      // START OR RESUME
-      const existing = timerStateRef.current;
-      const targetMins = existing ? existing.targetMinutes : selectedBlock.targetMinutes;
-      const accum = existing ? existing.accumulatedSeconds : (mode === 'countdown' ? (targetMins * 60 - secondsRemaining) : secondsElapsed);
+    const newState: PersistedStopwatchState = {
+      blockNumber: selectedBlock.blockNumber,
+      isActive: true,
+      startTimestamp: now,
+      accumulatedSeconds: accum,
+    };
 
-      const newState: PersistedTimerState = {
-        blockNumber: selectedBlock.blockNumber,
-        mode,
-        targetMinutes: targetMins,
-        isActive: true,
-        isPaused: false,
-        startTimestamp: now,
-        accumulatedSeconds: accum,
-      };
-
-      saveTimerToStorage(newState);
-      setIsActive(true);
-    } else {
-      // PAUSE
-      const existing = timerStateRef.current;
-      if (existing && existing.startTimestamp) {
-        const elapsedSinceStart = Math.floor((now - existing.startTimestamp) / 1000);
-        const newAccum = existing.accumulatedSeconds + elapsedSinceStart;
-
-        const pausedState: PersistedTimerState = {
-          ...existing,
-          isActive: true,
-          isPaused: true,
-          startTimestamp: null,
-          accumulatedSeconds: newAccum,
-        };
-
-        saveTimerToStorage(pausedState);
-      }
-      setIsActive(false);
-    }
+    saveStopwatchToStorage(newState);
+    setIsActive(true);
   };
 
-  const resetTimer = () => {
-    saveTimerToStorage(null);
+  // Pause stopwatch -> AUTOMATICALLY LOGS SESSION!
+  const handlePauseAndLog = async () => {
+    const now = Date.now();
+    const existing = stopwatchStateRef.current;
+    let finalSeconds = secondsElapsed;
+
+    if (existing && existing.startTimestamp) {
+      const elapsedSinceStart = Math.floor((now - existing.startTimestamp) / 1000);
+      finalSeconds = existing.accumulatedSeconds + elapsedSinceStart;
+    }
+
+    // Reset stopwatch state
+    saveStopwatchToStorage(null);
     setIsActive(false);
     setSecondsElapsed(0);
-    setSecondsRemaining(selectedBlock.targetMinutes * 60);
-  };
 
-  const addMinutes = (mins: number) => {
-    if (mode === 'countdown') {
-      const existing = timerStateRef.current;
-      const newTargetMins = (existing ? existing.targetMinutes : selectedBlock.targetMinutes) + mins;
-      setSecondsRemaining((prev) => prev + mins * 60);
+    // Only log if at least 15 seconds were elapsed, or round to 1 min
+    const minutesToLog = Math.max(1, Math.round(finalSeconds / 60));
 
-      if (existing) {
-        saveTimerToStorage({
-          ...existing,
-          targetMinutes: newTargetMins,
-        });
-      }
-    }
-  };
-
-  const openLogModal = (overrideMinutes?: number) => {
-    const mins = overrideMinutes 
-      ? overrideMinutes 
-      : mode === 'countdown'
-        ? Math.max(1, Math.round((selectedBlock.targetMinutes * 60 - secondsRemaining) / 60))
-        : Math.max(1, Math.round(secondsElapsed / 60));
-
-    setLogMinutes(mins > 0 ? mins : selectedBlock.targetMinutes);
-    setCategory(selectedBlock.category);
-    setSessionTitle(selectedBlock.title);
-    setIsLogModalOpen(true);
-  };
-
-  const handleSaveSession = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (logMinutes <= 0) return;
-    setIsSubmitting(true);
     try {
-      await saveStudySession({
+      const saved = await saveStudySession({
         session_date: new Date().toISOString().split('T')[0],
-        category,
-        duration_minutes: Number(logMinutes),
+        category: selectedBlock.category,
+        duration_minutes: minutesToLog,
         block_number: selectedBlock.blockNumber,
-        title: sessionTitle || selectedBlock.title,
-        notes: sessionNotes || undefined,
+        title: selectedBlock.title,
       });
-      setIsLogModalOpen(false);
-      setSessionNotes('');
-      setSessionTitle('');
-      resetTimer();
+
+      // Prompt for optional notes
+      setJustLoggedSession(saved);
+      setNotesInput('');
       onSessionLogged();
     } catch (err) {
-      console.error('Error logging session:', err);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Auto-log session error:', err);
     }
   };
 
-  const displaySeconds = mode === 'countdown' ? secondsRemaining : secondsElapsed;
-  const hours = Math.floor(displaySeconds / 3600);
-  const minutes = Math.floor((displaySeconds % 3600) / 60);
-  const seconds = displaySeconds % 60;
+  // Discard without saving
+  const handleDiscard = () => {
+    if (confirm('Discard current timer without saving?')) {
+      saveStopwatchToStorage(null);
+      setIsActive(false);
+      setSecondsElapsed(0);
+    }
+  };
 
-  const totalTargetSec = (timerStateRef.current?.targetMinutes || selectedBlock.targetMinutes) * 60;
-  const progressPercent = mode === 'countdown' 
-    ? Math.min(100, Math.max(0, ((totalTargetSec - secondsRemaining) / totalTargetSec) * 100))
-    : Math.min(100, (secondsElapsed / totalTargetSec) * 100);
+  // Save notes to the auto-logged session
+  const handleSaveNotes = async () => {
+    if (!justLoggedSession) return;
+    setIsSavingNotes(true);
+    try {
+      if (notesInput.trim()) {
+        await updateStudySession({
+          ...justLoggedSession,
+          notes: notesInput.trim(),
+        });
+        onSessionLogged();
+      }
+      setJustLoggedSession(null);
+    } catch (err) {
+      console.error('Error updating session notes:', err);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const hours = Math.floor(secondsElapsed / 3600);
+  const minutes = Math.floor((secondsElapsed % 3600) / 60);
+  const seconds = secondsElapsed % 60;
 
   const getBlockIcon = (num: number) => {
     switch (num) {
@@ -317,60 +240,32 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
   };
 
   return (
-    <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-      {/* Background ambient glow */}
-      <div className="absolute -top-24 -right-24 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden text-zinc-100">
+      {/* Background glow */}
+      <div className="absolute -top-24 -right-24 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header and Mode Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3.5 border-b border-zinc-800">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <Clock className="w-4 h-4" />
             </span>
-            <h2 className="text-base font-semibold text-white">Daily Block Study Timer</h2>
+            <h2 className="text-base font-semibold text-white">Focus Stopwatch</h2>
             {isActive && (
               <span className="flex items-center gap-1.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Running
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Tracking Practice
               </span>
             )}
           </div>
           <p className="text-xs text-zinc-400 mt-1">
-            Persists automatically across page refreshes and browser tabs.
+            Starts from 00:00:00. Pausing automatically logs your practice to your calendar!
           </p>
-        </div>
-
-        {/* Stopwatch vs Countdown switch */}
-        <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 self-start sm:self-auto">
-          <button
-            onClick={() => {
-              if (isActive && !confirm('Changing mode will reset the timer. Continue?')) return;
-              resetTimer();
-              setMode('countdown');
-            }}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition ${
-              mode === 'countdown' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            Countdown
-          </button>
-          <button
-            onClick={() => {
-              if (isActive && !confirm('Changing mode will reset the timer. Continue?')) return;
-              resetTimer();
-              setMode('stopwatch');
-            }}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition ${
-              mode === 'stopwatch' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            Stopwatch
-          </button>
         </div>
       </div>
 
       {/* 4 Daily Blocks Selector */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 my-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 my-4">
         {DAILY_BLOCKS.map((block) => {
           const isSelected = selectedBlock.blockNumber === block.blockNumber;
           return (
@@ -379,7 +274,7 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
               onClick={() => handleSelectBlock(block)}
               className={`p-3 rounded-xl border text-left transition-all relative ${
                 isSelected
-                  ? 'bg-zinc-800/90 border-indigo-500/80 shadow-md shadow-indigo-500/10'
+                  ? 'bg-zinc-800/90 border-emerald-500/80 shadow-md shadow-emerald-500/10'
                   : 'bg-zinc-950/60 border-zinc-800/80 hover:bg-zinc-850 hover:border-zinc-700'
               }`}
             >
@@ -392,171 +287,122 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
               <div className="text-xs font-semibold text-zinc-100 truncate">
                 {block.title.replace(`Block ${block.blockNumber}: `, '')}
               </div>
-              <div className="text-[11px] text-zinc-400 mt-1 flex items-center justify-between">
-                <span>{block.timeDescription}</span>
-                <span className="font-mono text-indigo-400 font-medium">{block.targetMinutes}m</span>
+              <div className="text-[11px] text-zinc-400 mt-1">
+                {block.timeDescription}
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* Main Timer Display */}
-      <div className="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-6 text-center my-4 relative">
+      {/* Stopwatch Display */}
+      <div className="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-6 text-center my-3 relative">
         <div className="text-xs text-zinc-400 font-medium mb-1">
           {selectedBlock.title} — {selectedBlock.description}
         </div>
 
-        {/* Digital Clock */}
+        {/* Digital Clock (Counts Up in Positive Direction from 00:00:00) */}
         <div className="text-5xl sm:text-6xl font-mono font-bold tracking-tight text-white my-3">
           {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-zinc-850 rounded-full h-2 my-4 overflow-hidden border border-zinc-800">
-          <div
-            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+        <div className="text-xs text-zinc-400 mb-4">
+          {secondsElapsed > 0 
+            ? `${(secondsElapsed / 3600).toFixed(2)} hours accumulated in this session`
+            : 'Click Start to begin timing this block'}
         </div>
 
-        {/* Timer Control Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
-          <button
-            onClick={toggleTimer}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition shadow-lg ${
-              isActive
-                ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
-            }`}
-          >
-            {isActive ? (
-              <>
-                <Pause className="w-4 h-4" /> Pause
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-white" /> Start Block
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={resetTimer}
-            className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
-            title="Reset Timer"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-
-          {mode === 'countdown' && (
-            <>
-              <button
-                onClick={() => addMinutes(5)}
-                className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition"
-              >
-                +5m
-              </button>
-              <button
-                onClick={() => addMinutes(15)}
-                className="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition"
-              >
-                +15m
-              </button>
-            </>
+        {/* Stopwatch Controls */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {!isActive ? (
+            <button
+              onClick={handleStart}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-white" /> Start Stopwatch
+            </button>
+          ) : (
+            <button
+              onClick={handlePauseAndLog}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/30 transition cursor-pointer"
+            >
+              <Pause className="w-4 h-4 fill-white" /> Pause &amp; Save Session
+            </button>
           )}
 
-          <button
-            onClick={() => openLogModal()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-600/30 text-xs font-semibold transition"
-          >
-            <Check className="w-4 h-4" /> Log Study Session
-          </button>
+          {secondsElapsed > 0 && (
+            <button
+              onClick={handleDiscard}
+              className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 transition"
+              title="Discard timer without logging"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Modal to log the study session to database */}
-      {isLogModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl text-zinc-100">
-            <h3 className="text-base font-semibold text-white mb-1 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" /> Log Completed Study Session
-            </h3>
-            <p className="text-xs text-zinc-400 mb-4">
-              Add this block to your daily and weekly preparation hours tracker.
-            </p>
-
-            <form onSubmit={handleSaveSession} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-zinc-300 font-medium mb-1">Subject / Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as StudyCategory)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="dsa">DSA (Python)</option>
-                  <option value="system_design">System Design & LLD</option>
-                  <option value="applied_ai">Applied AI (RAG, Agents, Projects)</option>
-                  <option value="core_cs">Core CS (OS, DB, Networking)</option>
-                  <option value="revision">Mistakes Log & Revision</option>
-                  <option value="mocks">Mock Interview / Timed Problem Set</option>
-                  <option value="other">Other Preparation</option>
-                </select>
+      {/* Optional Notes Modal (Triggered automatically on Pause) */}
+      {justLoggedSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl text-zinc-100 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400">
+                  <Check className="w-4 h-4" />
+                </span>
+                <h3 className="text-base font-semibold text-white">Session Logged!</h3>
               </div>
+              <button 
+                onClick={() => setJustLoggedSession(null)}
+                className="text-zinc-500 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-zinc-300 font-medium mb-1">Duration (Minutes)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="720"
-                  value={logMinutes}
-                  onChange={(e) => setLogMinutes(Number(e.target.value))}
-                  required
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-indigo-500 font-mono"
-                />
+            <div className="p-3 bg-zinc-950/80 border border-zinc-800 rounded-xl text-xs space-y-1">
+              <div className="font-semibold text-emerald-400">
+                {justLoggedSession.duration_minutes} minutes logged to {justLoggedSession.title}
               </div>
+              <div className="text-zinc-400 text-[11px]">
+                Date: {justLoggedSession.session_date}
+              </div>
+            </div>
 
-              <div>
-                <label className="block text-zinc-300 font-medium mb-1">Session Title / Topic</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Binary Trees DFS & Height Balanced"
-                  value={sessionTitle}
-                  onChange={(e) => setSessionTitle(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
+            <div>
+              <label className="block text-zinc-300 text-xs font-medium mb-1.5 flex items-center justify-between">
+                <span>Add Optional Notes / Problems Solved:</span>
+                <span className="text-[10px] text-zinc-500">(Optional)</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. Solved LeetCode 102 & 104; reviewed tree BFS pattern..."
+                value={notesInput}
+                onChange={(e) => setNotesInput(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 resize-none"
+                autoFocus
+              />
+            </div>
 
-              <div>
-                <label className="block text-zinc-300 font-medium mb-1">Notes / Problems Covered (Optional)</label>
-                <textarea
-                  rows={3}
-                  placeholder="Notes, patterns noticed, or what to review later..."
-                  value={sessionNotes}
-                  onChange={(e) => setSessionNotes(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-indigo-500 resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsLogModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  {isSubmitting ? 'Saving...' : 'Save to Tracker'}
-                </button>
-              </div>
-            </form>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setJustLoggedSession(null)}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition"
+              >
+                Skip / Done
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveNotes}
+                disabled={isSavingNotes}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-md shadow-emerald-600/30 flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {isSavingNotes ? 'Saving...' : 'Save Notes'}
+              </button>
+            </div>
           </div>
         </div>
       )}

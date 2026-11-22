@@ -11,7 +11,8 @@ import {
   Briefcase, 
   Database,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { isSupabaseConfigured, ensureSupabaseConfig } from '@/lib/supabase';
 import { SupabaseModal } from './SupabaseModal';
@@ -42,8 +43,10 @@ export function Navbar({
 }: NavbarProps) {
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [todayFormatted, setTodayFormatted] = useState('');
 
   useEffect(() => {
+    setTodayFormatted(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
     ensureSupabaseConfig().then(() => {
       setSupabaseConnected(isSupabaseConfigured());
     });
@@ -103,20 +106,10 @@ export function Navbar({
                 </span>
               </div>
 
-              {/* Week selector */}
-              <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-zinc-300">
-                <span className="text-zinc-500">Wk:</span>
-                <select
-                  value={currentWeek}
-                  onChange={(e) => onWeekChange(Number(e.target.value))}
-                  className="bg-transparent border-none text-zinc-200 font-medium focus:outline-none cursor-pointer"
-                >
-                  {Array.from({ length: 44 }, (_, i) => i + 1).map((w) => (
-                    <option key={w} value={w} className="bg-zinc-900 text-zinc-200">
-                      Week {w}
-                    </option>
-                  ))}
-                </select>
+              {/* Today's Date Badge */}
+              <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-300 font-medium">
+                <CalendarIcon className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{todayFormatted || 'Today'}</span>
               </div>
 
               {/* Database Status Button */}

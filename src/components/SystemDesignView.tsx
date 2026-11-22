@@ -53,8 +53,12 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
   const [recordedOutLoud, setRecordedOutLoud] = useState(false);
   const [frameworkFollowed, setFrameworkFollowed] = useState(true);
   const [notes, setNotes] = useState('');
-  const [practicedDate, setPracticedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [practicedDate, setPracticedDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    setPracticedDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Play, 
   Pause, 
@@ -23,6 +23,18 @@ interface ActiveTimerProps {
   onSessionLogged: () => void;
 }
 
+const TIMER_STORAGE_KEY = 'roadmap_active_timer_state_v1';
+
+interface PersistedTimerState {
+  blockNumber: 1 | 2 | 3 | 4;
+  mode: 'countdown' | 'stopwatch';
+  targetMinutes: number;
+  isActive: boolean;
+  isPaused: boolean;
+  startTimestamp: number | null;
+  accumulatedSeconds: number;
+}
+
 export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
   // Timer States
   const [selectedBlock, setSelectedBlock] = useState<DailyBlockConfig>(DAILY_BLOCKS[0]);
@@ -34,25 +46,13 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
 
   // Form State for logging
   const [category, setCategory] = useState<StudyCategory>('dsa');
-  const [logMinutes, setLogMinutes] = useState<number>(selectedBlock.targetMinutes);
+  const [logMinutes, setLogMinutes] = useState<number>(DAILY_BLOCKS[0].targetMinutes);
   const [sessionTitle, setSessionTitle] = useState<string>('');
   const [sessionNotes, setSessionNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Switch block preset
-  const handleSelectBlock = (block: DailyBlockConfig) => {
-    setSelectedBlock(block);
-    setCategory(block.category);
-    setLogMinutes(block.targetMinutes);
-    setIsActive(false);
-    if (mode === 'countdown') {
-      setSecondsRemaining(block.targetMinutes * 60);
-    } else {
-      setSecondsElapsed(0);
-    }
-  };
+  const timerStateRef = useRef<PersistedTimerState | null>(null);
 
   // Play beep sound using Web Audio API
   const playBeep = () => {
@@ -73,22 +73,83 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
     }
   };
 
+  // Helper to persist timer state
+  const saveTimerToStorage = (state: PersistedTimerState | null) => {
+    timerStateRef.current = state;
+    if (typeof window === 'undefined') return;
+    if (!state) {
+      localStorage.removeItem(TIMER_STORAGE_KEY);
+    } else {
+      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(state));
+    }
+  };
+
+  // Calculate and sync current time based on wall clock
+  const syncTimerFromState = useCallback((state: PersistedTimerState) => {
+    const now = Date.now();
+    const elapsedSinceStart = (state.isActive && !state.isPaused && state.startTimestamp) 
+      ? Math.floor((now - state.startTimestamp) / 1000) 
+      : 0;
+    const totalElapsed = state.accumulatedSeconds + elapsedSinceStart;
+
+    if (state.mode === 'countdown') {
+      const targetSec = state.targetMinutes * 60;
+      const remaining = Math.max(0, targetSec - totalElapsed);
+      setSecondsRemaining(remaining);
+      setSecondsElapsed(totalElapsed);
+
+      if (remaining <= 0 && state.isActive && !state.isPaused) {
+        // Countdown reached 0
+        playBeep();
+        setIsActive(false);
+        saveTimerToStorage(null);
+        openLogModal(state.targetMinutes);
+        return;
+      }
+    } else {
+      setSecondsElapsed(totalElapsed);
+    }
+
+    setIsActive(state.isActive && !state.isPaused);
+  }, []);
+
+  // Restore on mount from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed: PersistedTimerState = JSON.parse(raw);
+        timerStateRef.current = parsed;
+        const block = DAILY_BLOCKS.find((b) => b.blockNumber === parsed.blockNumber) || DAILY_BLOCKS[0];
+        setSelectedBlock(block);
+        setMode(parsed.mode);
+        setCategory(block.category);
+        setLogMinutes(parsed.targetMinutes);
+        syncTimerFromState(parsed);
+      } catch (err) {
+        console.error('Failed to parse saved timer state:', err);
+      }
+    }
+  }, [syncTimerFromState]);
+
+  // Handle visibility change (tab refocus)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && timerStateRef.current) {
+        syncTimerFromState(timerStateRef.current);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [syncTimerFromState]);
+
+  // Main tick loop
   useEffect(() => {
     if (isActive) {
       timerRef.current = setInterval(() => {
-        if (mode === 'countdown') {
-          setSecondsRemaining((prev) => {
-            if (prev <= 1) {
-              clearInterval(timerRef.current!);
-              setIsActive(false);
-              playBeep();
-              openLogModal(selectedBlock.targetMinutes);
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setSecondsElapsed((prev) => prev + 1);
+        if (timerStateRef.current) {
+          syncTimerFromState(timerStateRef.current);
         }
       }, 1000);
     } else {
@@ -98,22 +159,102 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, mode, selectedBlock]);
+  }, [isActive, syncTimerFromState]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  // Update browser tab title with active countdown/timer
+  useEffect(() => {
+    if (!isActive) {
+      document.title = '10-Month SDE & Applied AI Roadmap Tracker';
+      return;
+    }
+
+    const displaySec = mode === 'countdown' ? secondsRemaining : secondsElapsed;
+    const h = Math.floor(displaySec / 3600);
+    const m = Math.floor((displaySec % 3600) / 60);
+    const s = displaySec % 60;
+    const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    document.title = `(${timeStr}) Block ${selectedBlock.blockNumber}: ${selectedBlock.title.replace(`Block ${selectedBlock.blockNumber}: `, '')} - Tracker`;
+
+    return () => {
+      document.title = '10-Month SDE & Applied AI Roadmap Tracker';
+    };
+  }, [isActive, mode, secondsRemaining, secondsElapsed, selectedBlock]);
+
+  // Switch block preset
+  const handleSelectBlock = (block: DailyBlockConfig) => {
+    if (isActive && !confirm('Switching block will reset the current timer. Continue?')) {
+      return;
+    }
+    saveTimerToStorage(null);
+    setSelectedBlock(block);
+    setCategory(block.category);
+    setLogMinutes(block.targetMinutes);
+    setIsActive(false);
+    setSecondsElapsed(0);
+    setSecondsRemaining(block.targetMinutes * 60);
+  };
+
+  const toggleTimer = () => {
+    const now = Date.now();
+
+    if (!isActive) {
+      // START OR RESUME
+      const existing = timerStateRef.current;
+      const targetMins = existing ? existing.targetMinutes : selectedBlock.targetMinutes;
+      const accum = existing ? existing.accumulatedSeconds : (mode === 'countdown' ? (targetMins * 60 - secondsRemaining) : secondsElapsed);
+
+      const newState: PersistedTimerState = {
+        blockNumber: selectedBlock.blockNumber,
+        mode,
+        targetMinutes: targetMins,
+        isActive: true,
+        isPaused: false,
+        startTimestamp: now,
+        accumulatedSeconds: accum,
+      };
+
+      saveTimerToStorage(newState);
+      setIsActive(true);
+    } else {
+      // PAUSE
+      const existing = timerStateRef.current;
+      if (existing && existing.startTimestamp) {
+        const elapsedSinceStart = Math.floor((now - existing.startTimestamp) / 1000);
+        const newAccum = existing.accumulatedSeconds + elapsedSinceStart;
+
+        const pausedState: PersistedTimerState = {
+          ...existing,
+          isActive: true,
+          isPaused: true,
+          startTimestamp: null,
+          accumulatedSeconds: newAccum,
+        };
+
+        saveTimerToStorage(pausedState);
+      }
+      setIsActive(false);
+    }
+  };
 
   const resetTimer = () => {
+    saveTimerToStorage(null);
     setIsActive(false);
-    if (mode === 'countdown') {
-      setSecondsRemaining(selectedBlock.targetMinutes * 60);
-    } else {
-      setSecondsElapsed(0);
-    }
+    setSecondsElapsed(0);
+    setSecondsRemaining(selectedBlock.targetMinutes * 60);
   };
 
   const addMinutes = (mins: number) => {
     if (mode === 'countdown') {
+      const existing = timerStateRef.current;
+      const newTargetMins = (existing ? existing.targetMinutes : selectedBlock.targetMinutes) + mins;
       setSecondsRemaining((prev) => prev + mins * 60);
+
+      if (existing) {
+        saveTimerToStorage({
+          ...existing,
+          targetMinutes: newTargetMins,
+        });
+      }
     }
   };
 
@@ -160,7 +301,7 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
   const minutes = Math.floor((displaySeconds % 3600) / 60);
   const seconds = displaySeconds % 60;
 
-  const totalTargetSec = selectedBlock.targetMinutes * 60;
+  const totalTargetSec = (timerStateRef.current?.targetMinutes || selectedBlock.targetMinutes) * 60;
   const progressPercent = mode === 'countdown' 
     ? Math.min(100, Math.max(0, ((totalTargetSec - secondsRemaining) / totalTargetSec) * 100))
     : Math.min(100, (secondsElapsed / totalTargetSec) * 100);
@@ -188,9 +329,14 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
               <Clock className="w-4 h-4" />
             </span>
             <h2 className="text-base font-semibold text-white">Daily Block Study Timer</h2>
+            {isActive && (
+              <span className="flex items-center gap-1.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Running
+              </span>
+            )}
           </div>
           <p className="text-xs text-zinc-400 mt-1">
-            Follow the 4 daily focus blocks to hit your 6.5h daily weekday target.
+            Persists automatically across page refreshes and browser tabs.
           </p>
         </div>
 
@@ -198,9 +344,9 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
         <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 self-start sm:self-auto">
           <button
             onClick={() => {
+              if (isActive && !confirm('Changing mode will reset the timer. Continue?')) return;
+              resetTimer();
               setMode('countdown');
-              setIsActive(false);
-              setSecondsRemaining(selectedBlock.targetMinutes * 60);
             }}
             className={`px-3 py-1 text-xs font-medium rounded-lg transition ${
               mode === 'countdown' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
@@ -210,9 +356,9 @@ export function ActiveTimer({ onSessionLogged }: ActiveTimerProps) {
           </button>
           <button
             onClick={() => {
+              if (isActive && !confirm('Changing mode will reset the timer. Continue?')) return;
+              resetTimer();
               setMode('stopwatch');
-              setIsActive(false);
-              setSecondsElapsed(0);
             }}
             className={`px-3 py-1 text-xs font-medium rounded-lg transition ${
               mode === 'stopwatch' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'

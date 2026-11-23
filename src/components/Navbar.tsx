@@ -164,7 +164,10 @@ export function Navbar({
           </div>
 
           {/* Navigation Bar Tabs */}
-          <nav className="flex space-x-1 overflow-x-auto py-2 scrollbar-none border-t border-zinc-800/60">
+          <nav 
+            className="flex space-x-1 overflow-x-auto py-2 no-scrollbar scrollbar-none border-t border-zinc-800/60"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (

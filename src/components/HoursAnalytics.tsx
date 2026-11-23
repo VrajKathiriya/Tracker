@@ -252,7 +252,10 @@ export function HoursAnalytics({ sessions, onSessionDeleted, currentWeek }: Hour
             No study sessions logged yet. Use the timer above or click &quot;Log Study Session&quot; to add your first block.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div 
+            className="overflow-x-auto no-scrollbar scrollbar-none"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             <table className="w-full text-left text-xs text-zinc-300">
               <thead className="text-[11px] uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
                 <tr>

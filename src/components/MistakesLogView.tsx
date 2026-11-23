@@ -393,7 +393,10 @@ export function MistakesLogView({ problems, onRefresh }: MistakesLogViewProps) {
       {/* Add Problem Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 text-zinc-100">
+          <div 
+            className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar scrollbar-none p-6 text-zinc-100"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 text-indigo-400" /> Log Solved Problem &amp; Mistake

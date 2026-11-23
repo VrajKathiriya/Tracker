@@ -92,7 +92,10 @@ export function SundayReviewView({ reviews, onRefresh, currentWeek }: SundayRevi
         </div>
 
         {/* Week Selector Bar */}
-        <div className="flex items-center gap-2 pt-2 border-t border-zinc-800 overflow-x-auto pb-1 scrollbar-none">
+        <div 
+          className="flex items-center gap-2 pt-2 border-t border-zinc-800 overflow-x-auto pb-1 no-scrollbar scrollbar-none"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">Jump to:</span>
           {Array.from({ length: 44 }, (_, i) => i + 1).map((w) => {
             const hasReview = reviews.some((r) => r.week_number === w);

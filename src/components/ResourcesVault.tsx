@@ -170,8 +170,11 @@ export function ResourcesVault({ category }: ResourcesVaultProps) {
           )}
         </p>
 
-        {/* Horizontal Visual Progression Scroll */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 text-xs font-mono scrollbar-thin">
+        {/* Horizontal Visual Progression Scroll (Scrollable without visible scrollbar) */}
+        <div 
+          className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 text-xs font-mono no-scrollbar scrollbar-none"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {allResources.map((res, i) => (
             <React.Fragment key={res.id}>
               <button

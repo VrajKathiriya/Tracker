@@ -389,7 +389,10 @@ export function ActivityCalendar({
               No sessions recorded on this day.
             </div>
           ) : (
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div 
+              className="space-y-2 max-h-56 overflow-y-auto no-scrollbar scrollbar-none"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {selectedDaySessions.map((s) => (
                 <div
                   key={s.id}

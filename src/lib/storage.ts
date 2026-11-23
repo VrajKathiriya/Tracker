@@ -54,30 +54,7 @@ export async function fetchStudySessions(): Promise<StudySession[]> {
 
       if (!error && data) {
         const cloudSessions = data as StudySession[];
-        const localSessions = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
-
-        // Auto-migrate any local session that was saved while Supabase was disconnected/unauthorized
-        const unsynced = localSessions.filter(
-          local => !cloudSessions.some(cloud => cloud.id === local.id)
-        );
-
-        if (unsynced.length > 0) {
-          console.info(`[Storage] Auto-syncing ${unsynced.length} local session(s) to Supabase...`);
-          try {
-            const { error: pushErr } = await supabase.from('study_sessions').insert(unsynced);
-            if (pushErr && (pushErr.code === 'PGRST204' || pushErr.message?.includes('duration_seconds'))) {
-              // Schema does not yet have duration_seconds, retry without it
-              const sanitized = unsynced.map(({ duration_seconds, ...rest }) => rest);
-              await supabase.from('study_sessions').insert(sanitized);
-            }
-            cloudSessions.push(...unsynced);
-            cloudSessions.sort((a, b) => b.session_date.localeCompare(a.session_date));
-          } catch (syncErr) {
-            console.warn('[Storage] Auto-sync session push failed:', syncErr);
-          }
-        }
-
-        // Cache the full cloud list locally
+        // Database is single source of truth: overwrite local cache with cloud data
         setLocal(LOCAL_STORAGE_KEYS.SESSIONS, cloudSessions);
         return cloudSessions;
       }
@@ -190,22 +167,6 @@ export async function fetchProblemsLog(): Promise<ProblemLog[]> {
 
       if (!error && data) {
         const cloudProblems = data as ProblemLog[];
-        const localProblems = getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
-
-        const unsynced = localProblems.filter(
-          local => !cloudProblems.some(cloud => cloud.id === local.id)
-        );
-
-        if (unsynced.length > 0) {
-          try {
-            await supabase.from('problems_log').insert(unsynced);
-            cloudProblems.push(...unsynced);
-            cloudProblems.sort((a, b) => b.solved_date.localeCompare(a.solved_date));
-          } catch (syncErr) {
-            console.warn('[Storage] Auto-sync problems failed:', syncErr);
-          }
-        }
-
         setLocal(LOCAL_STORAGE_KEYS.PROBLEMS, cloudProblems);
         return cloudProblems;
       }
@@ -304,22 +265,6 @@ export async function fetchSystemDesignLogs(): Promise<SystemDesignLog[]> {
 
       if (!error && data) {
         const cloudDesigns = data as SystemDesignLog[];
-        const localDesigns = getLocal<SystemDesignLog[]>(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, []);
-
-        const unsynced = localDesigns.filter(
-          local => !cloudDesigns.some(cloud => cloud.id === local.id)
-        );
-
-        if (unsynced.length > 0) {
-          try {
-            await supabase.from('system_design_log').insert(unsynced);
-            cloudDesigns.push(...unsynced);
-            cloudDesigns.sort((a, b) => b.practiced_date.localeCompare(a.practiced_date));
-          } catch (syncErr) {
-            console.warn('[Storage] Auto-sync system design logs failed:', syncErr);
-          }
-        }
-
         setLocal(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, cloudDesigns);
         return cloudDesigns;
       }

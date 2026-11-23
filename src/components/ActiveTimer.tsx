@@ -309,7 +309,7 @@ export function ActiveTimer({ sessions, onSessionLogged }: ActiveTimerProps) {
           const baseBorderColor = isSelected ? '#3f3f46' : '#27272a';
           const borderStyle: React.CSSProperties = progressPercent > 0
             ? {
-                background: `conic-gradient(from 0deg at 50% 50%, #047857 0%, #059669 ${progressPercent}%, ${baseBorderColor} ${progressPercent}%, ${baseBorderColor} 100%)`
+                background: `conic-gradient(from 0deg at 50% 50%, #059669 0%, #10b981 ${progressPercent}%, ${baseBorderColor} ${progressPercent}%, ${baseBorderColor} 100%)`
               }
             : {
                 backgroundColor: baseBorderColor
@@ -318,13 +318,13 @@ export function ActiveTimer({ sessions, onSessionLogged }: ActiveTimerProps) {
           return (
             <div
               key={block.blockNumber}
-              className="p-[1.5px] rounded-xl transition-all"
+              className={`${progressPercent > 0 ? 'p-[2.5px]' : 'p-[1.5px]'} rounded-xl transition-all`}
               style={borderStyle}
             >
               <button
                 type="button"
                 onClick={() => handleSelectBlock(block)}
-                className={`w-full h-full p-3 rounded-[10.5px] text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                className={`w-full h-full p-3 rounded-[9.5px] text-left transition-colors cursor-pointer flex flex-col justify-between ${
                   isSelected
                     ? 'bg-zinc-800 text-white'
                     : 'bg-zinc-950 hover:bg-zinc-900/90'

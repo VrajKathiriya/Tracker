@@ -326,7 +326,7 @@ export function ActivityCalendar({
             const baseBorder = '#27272a';
             const conicBorder: React.CSSProperties = pct > 0
               ? {
-                  background: `conic-gradient(from 0deg at 50% 50%, #047857 0%, #059669 ${pct}%, ${baseBorder} ${pct}%, ${baseBorder} 100%)`
+                  background: `conic-gradient(from 0deg at 50% 50%, #059669 0%, #10b981 ${pct}%, ${baseBorder} ${pct}%, ${baseBorder} 100%)`
                 }
               : {
                   backgroundColor: baseBorder
@@ -355,10 +355,10 @@ export function ActivityCalendar({
             return (
               <div
                 key={block.blockNumber}
-                className="p-[1.5px] rounded-xl transition-all"
+                className={`${pct > 0 ? 'p-[2.5px]' : 'p-[1.5px]'} rounded-xl transition-all`}
                 style={conicBorder}
               >
-                <div className="p-2.5 bg-zinc-950 rounded-[10px] h-full flex flex-col justify-between">
+                <div className="p-2.5 bg-zinc-950 rounded-[9.5px] h-full flex flex-col justify-between">
                   <div className="flex items-center justify-between">
                     <span className={`text-[10px] font-semibold uppercase ${getBlockCategoryColor(block.blockNumber)} truncate`}>
                       B{block.blockNumber}: {getShortCategoryName(block.category)}

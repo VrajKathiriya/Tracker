@@ -1,4 +1,4 @@
-import { getSupabaseClient, isSupabaseConfigured } from './supabase';
+import { getSupabaseClient } from './supabase';
 import { 
   StudySession, 
   ProblemLog, 
@@ -46,11 +46,43 @@ function setLocal<T>(key: string, value: T): void {
 export async function fetchStudySessions(): Promise<StudySession[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('study_sessions')
-      .select('*')
-      .order('session_date', { ascending: false });
-    if (!error && data) return data as StudySession[];
+    try {
+      const { data, error } = await supabase
+        .from('study_sessions')
+        .select('*')
+        .order('session_date', { ascending: false });
+
+      if (!error && data) {
+        const cloudSessions = data as StudySession[];
+        const localSessions = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
+
+        // Auto-migrate any local session that was saved while Supabase was disconnected/unauthorized
+        const unsynced = localSessions.filter(
+          local => !cloudSessions.some(cloud => cloud.id === local.id)
+        );
+
+        if (unsynced.length > 0) {
+          console.info(`[Storage] Auto-syncing ${unsynced.length} local session(s) to Supabase...`);
+          try {
+            await supabase.from('study_sessions').insert(unsynced);
+            cloudSessions.push(...unsynced);
+            cloudSessions.sort((a, b) => b.session_date.localeCompare(a.session_date));
+          } catch (syncErr) {
+            console.warn('[Storage] Auto-sync session push failed:', syncErr);
+          }
+        }
+
+        // Cache the full cloud list locally
+        setLocal(LOCAL_STORAGE_KEYS.SESSIONS, cloudSessions);
+        return cloudSessions;
+      }
+
+      if (error) {
+        console.warn(`[Supabase fetchStudySessions (${error.code})]: ${error.message}`);
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchStudySessions exception]:', err);
+    }
   }
   return getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
 }
@@ -64,14 +96,30 @@ export async function saveStudySession(session: Omit<StudySession, 'id' | 'creat
 
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('study_sessions')
-      .insert([newSession])
-      .select()
-      .single();
-    if (!error && data) return data as StudySession;
+    try {
+      const { data, error } = await supabase
+        .from('study_sessions')
+        .insert([newSession])
+        .select()
+        .single();
+
+      if (!error && data) {
+        const saved = data as StudySession;
+        const existing = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
+        const updated = [saved, ...existing.filter(s => s.id !== saved.id)];
+        setLocal(LOCAL_STORAGE_KEYS.SESSIONS, updated);
+        return saved;
+      }
+
+      if (error) {
+        console.error(`[Supabase saveStudySession Error ${error.code}]: ${error.message}. Hint: ${error.hint || 'Grant permissions to anon role'}`);
+      }
+    } catch (err) {
+      console.error('[Supabase saveStudySession exception]:', err);
+    }
   }
 
+  // Fallback to local storage
   const existing = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
   const updated = [newSession, ...existing];
   setLocal(LOCAL_STORAGE_KEYS.SESSIONS, updated);
@@ -81,7 +129,14 @@ export async function saveStudySession(session: Omit<StudySession, 'id' | 'creat
 export async function updateStudySession(session: StudySession): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('study_sessions').update(session).eq('id', session.id);
+    try {
+      const { error } = await supabase.from('study_sessions').update(session).eq('id', session.id);
+      if (error) {
+        console.warn(`[Supabase updateStudySession Error ${error.code}]:`, error.message);
+      }
+    } catch (err) {
+      console.warn('[Supabase updateStudySession exception]:', err);
+    }
   }
   const existing = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
   const updated = existing.map(s => s.id === session.id ? session : s);
@@ -91,7 +146,14 @@ export async function updateStudySession(session: StudySession): Promise<void> {
 export async function deleteStudySession(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('study_sessions').delete().eq('id', id);
+    try {
+      const { error } = await supabase.from('study_sessions').delete().eq('id', id);
+      if (error) {
+        console.warn(`[Supabase deleteStudySession Error ${error.code}]:`, error.message);
+      }
+    } catch (err) {
+      console.warn('[Supabase deleteStudySession exception]:', err);
+    }
   }
   const existing = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
   setLocal(LOCAL_STORAGE_KEYS.SESSIONS, existing.filter(s => s.id !== id));
@@ -103,11 +165,36 @@ export async function deleteStudySession(id: string): Promise<void> {
 export async function fetchProblemsLog(): Promise<ProblemLog[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('problems_log')
-      .select('*')
-      .order('solved_date', { ascending: false });
-    if (!error && data) return data as ProblemLog[];
+    try {
+      const { data, error } = await supabase
+        .from('problems_log')
+        .select('*')
+        .order('solved_date', { ascending: false });
+
+      if (!error && data) {
+        const cloudProblems = data as ProblemLog[];
+        const localProblems = getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
+
+        const unsynced = localProblems.filter(
+          local => !cloudProblems.some(cloud => cloud.id === local.id)
+        );
+
+        if (unsynced.length > 0) {
+          try {
+            await supabase.from('problems_log').insert(unsynced);
+            cloudProblems.push(...unsynced);
+            cloudProblems.sort((a, b) => b.solved_date.localeCompare(a.solved_date));
+          } catch (syncErr) {
+            console.warn('[Storage] Auto-sync problems failed:', syncErr);
+          }
+        }
+
+        setLocal(LOCAL_STORAGE_KEYS.PROBLEMS, cloudProblems);
+        return cloudProblems;
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchProblemsLog exception]:', err);
+    }
   }
   return getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
 }
@@ -133,12 +220,21 @@ export async function saveProblemLog(problem: Omit<ProblemLog, 'id' | 'created_a
 
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('problems_log')
-      .insert([newProblem])
-      .select()
-      .single();
-    if (!error && data) return data as ProblemLog;
+    try {
+      const { data, error } = await supabase
+        .from('problems_log')
+        .insert([newProblem])
+        .select()
+        .single();
+      if (!error && data) {
+        const saved = data as ProblemLog;
+        const existing = getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
+        setLocal(LOCAL_STORAGE_KEYS.PROBLEMS, [saved, ...existing.filter(p => p.id !== saved.id)]);
+        return saved;
+      }
+    } catch (err) {
+      console.warn('[Supabase saveProblemLog exception]:', err);
+    }
   }
 
   const existing = getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
@@ -152,7 +248,11 @@ export async function markProblemReviewed(id: string, interval: '7d' | '30d', st
 
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('problems_log').update({ [field]: status }).eq('id', id);
+    try {
+      await supabase.from('problems_log').update({ [field]: status }).eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase markProblemReviewed exception]:', err);
+    }
   }
 
   const existing = getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
@@ -163,7 +263,11 @@ export async function markProblemReviewed(id: string, interval: '7d' | '30d', st
 export async function deleteProblemLog(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('problems_log').delete().eq('id', id);
+    try {
+      await supabase.from('problems_log').delete().eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase deleteProblemLog exception]:', err);
+    }
   }
   const existing = getLocal<ProblemLog[]>(LOCAL_STORAGE_KEYS.PROBLEMS, []);
   setLocal(LOCAL_STORAGE_KEYS.PROBLEMS, existing.filter(p => p.id !== id));
@@ -175,11 +279,36 @@ export async function deleteProblemLog(id: string): Promise<void> {
 export async function fetchSystemDesignLogs(): Promise<SystemDesignLog[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('system_design_log')
-      .select('*')
-      .order('practiced_date', { ascending: false });
-    if (!error && data) return data as SystemDesignLog[];
+    try {
+      const { data, error } = await supabase
+        .from('system_design_log')
+        .select('*')
+        .order('practiced_date', { ascending: false });
+
+      if (!error && data) {
+        const cloudDesigns = data as SystemDesignLog[];
+        const localDesigns = getLocal<SystemDesignLog[]>(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, []);
+
+        const unsynced = localDesigns.filter(
+          local => !cloudDesigns.some(cloud => cloud.id === local.id)
+        );
+
+        if (unsynced.length > 0) {
+          try {
+            await supabase.from('system_design_log').insert(unsynced);
+            cloudDesigns.push(...unsynced);
+            cloudDesigns.sort((a, b) => b.practiced_date.localeCompare(a.practiced_date));
+          } catch (syncErr) {
+            console.warn('[Storage] Auto-sync system design logs failed:', syncErr);
+          }
+        }
+
+        setLocal(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, cloudDesigns);
+        return cloudDesigns;
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchSystemDesignLogs exception]:', err);
+    }
   }
   return getLocal<SystemDesignLog[]>(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, []);
 }
@@ -193,12 +322,21 @@ export async function saveSystemDesignLog(entry: Omit<SystemDesignLog, 'id' | 'c
 
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('system_design_log')
-      .insert([newEntry])
-      .select()
-      .single();
-    if (!error && data) return data as SystemDesignLog;
+    try {
+      const { data, error } = await supabase
+        .from('system_design_log')
+        .insert([newEntry])
+        .select()
+        .single();
+      if (!error && data) {
+        const saved = data as SystemDesignLog;
+        const existing = getLocal<SystemDesignLog[]>(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, []);
+        setLocal(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, [saved, ...existing.filter(s => s.id !== saved.id)]);
+        return saved;
+      }
+    } catch (err) {
+      console.warn('[Supabase saveSystemDesignLog exception]:', err);
+    }
   }
 
   const existing = getLocal<SystemDesignLog[]>(LOCAL_STORAGE_KEYS.SYSTEM_DESIGN, []);
@@ -213,11 +351,18 @@ export async function saveSystemDesignLog(entry: Omit<SystemDesignLog, 'id' | 'c
 export async function fetchWeeklyReviews(): Promise<WeeklyReview[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('weekly_reviews')
-      .select('*')
-      .order('week_number', { ascending: false });
-    if (!error && data) return data as WeeklyReview[];
+    try {
+      const { data, error } = await supabase
+        .from('weekly_reviews')
+        .select('*')
+        .order('week_number', { ascending: false });
+      if (!error && data) {
+        setLocal(LOCAL_STORAGE_KEYS.WEEKLY_REVIEWS, data as WeeklyReview[]);
+        return data as WeeklyReview[];
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchWeeklyReviews exception]:', err);
+    }
   }
   return getLocal<WeeklyReview[]>(LOCAL_STORAGE_KEYS.WEEKLY_REVIEWS, []);
 }
@@ -231,12 +376,22 @@ export async function saveWeeklyReview(review: Omit<WeeklyReview, 'id' | 'create
 
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('weekly_reviews')
-      .upsert([newReview], { onConflict: 'week_number' })
-      .select()
-      .single();
-    if (!error && data) return data as WeeklyReview;
+    try {
+      const { data, error } = await supabase
+        .from('weekly_reviews')
+        .upsert([newReview], { onConflict: 'week_number' })
+        .select()
+        .single();
+      if (!error && data) {
+        const saved = data as WeeklyReview;
+        const existing = getLocal<WeeklyReview[]>(LOCAL_STORAGE_KEYS.WEEKLY_REVIEWS, []);
+        const filtered = existing.filter(r => r.week_number !== review.week_number);
+        setLocal(LOCAL_STORAGE_KEYS.WEEKLY_REVIEWS, [saved, ...filtered].sort((a, b) => b.week_number - a.week_number));
+        return saved;
+      }
+    } catch (err) {
+      console.warn('[Supabase saveWeeklyReview exception]:', err);
+    }
   }
 
   const existing = getLocal<WeeklyReview[]>(LOCAL_STORAGE_KEYS.WEEKLY_REVIEWS, []);
@@ -252,11 +407,18 @@ export async function saveWeeklyReview(review: Omit<WeeklyReview, 'id' | 'create
 export async function fetchRoadmapGates(): Promise<RoadmapGate[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('roadmap_gates')
-      .select('*')
-      .order('target_month', { ascending: true });
-    if (!error && data && data.length > 0) return data as RoadmapGate[];
+    try {
+      const { data, error } = await supabase
+        .from('roadmap_gates')
+        .select('*')
+        .order('target_month', { ascending: true });
+      if (!error && data && data.length > 0) {
+        setLocal(LOCAL_STORAGE_KEYS.GATES, data as RoadmapGate[]);
+        return data as RoadmapGate[];
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchRoadmapGates exception]:', err);
+    }
   }
   return getLocal<RoadmapGate[]>(LOCAL_STORAGE_KEYS.GATES, INITIAL_GATES);
 }
@@ -264,7 +426,11 @@ export async function fetchRoadmapGates(): Promise<RoadmapGate[]> {
 export async function updateRoadmapGate(gate: RoadmapGate): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('roadmap_gates').upsert(gate);
+    try {
+      await supabase.from('roadmap_gates').upsert(gate);
+    } catch (err) {
+      console.warn('[Supabase updateRoadmapGate exception]:', err);
+    }
   }
   const existing = getLocal<RoadmapGate[]>(LOCAL_STORAGE_KEYS.GATES, INITIAL_GATES);
   const updated = existing.map(g => g.id === gate.id ? gate : g);
@@ -277,11 +443,18 @@ export async function updateRoadmapGate(gate: RoadmapGate): Promise<void> {
 export async function fetchProjectMilestones(): Promise<ProjectMilestone[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('project_milestones')
-      .select('*')
-      .order('phase', { ascending: true });
-    if (!error && data && data.length > 0) return data as ProjectMilestone[];
+    try {
+      const { data, error } = await supabase
+        .from('project_milestones')
+        .select('*')
+        .order('phase', { ascending: true });
+      if (!error && data && data.length > 0) {
+        setLocal(LOCAL_STORAGE_KEYS.PROJECTS, data as ProjectMilestone[]);
+        return data as ProjectMilestone[];
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchProjectMilestones exception]:', err);
+    }
   }
   return getLocal<ProjectMilestone[]>(LOCAL_STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
 }
@@ -289,7 +462,11 @@ export async function fetchProjectMilestones(): Promise<ProjectMilestone[]> {
 export async function updateProjectMilestone(project: ProjectMilestone): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('project_milestones').upsert(project);
+    try {
+      await supabase.from('project_milestones').upsert(project);
+    } catch (err) {
+      console.warn('[Supabase updateProjectMilestone exception]:', err);
+    }
   }
   const existing = getLocal<ProjectMilestone[]>(LOCAL_STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
   const updated = existing.map(p => p.id === project.id ? project : p);
@@ -302,11 +479,18 @@ export async function updateProjectMilestone(project: ProjectMilestone): Promise
 export async function fetchJobApplications(): Promise<JobApplication[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('job_applications')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error && data) return data as JobApplication[];
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setLocal(LOCAL_STORAGE_KEYS.APPLICATIONS, data as JobApplication[]);
+        return data as JobApplication[];
+      }
+    } catch (err) {
+      console.warn('[Supabase fetchJobApplications exception]:', err);
+    }
   }
   return getLocal<JobApplication[]>(LOCAL_STORAGE_KEYS.APPLICATIONS, []);
 }
@@ -320,12 +504,21 @@ export async function saveJobApplication(app: Omit<JobApplication, 'id' | 'creat
 
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('job_applications')
-      .insert([newApp])
-      .select()
-      .single();
-    if (!error && data) return data as JobApplication;
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .insert([newApp])
+        .select()
+        .single();
+      if (!error && data) {
+        const saved = data as JobApplication;
+        const existing = getLocal<JobApplication[]>(LOCAL_STORAGE_KEYS.APPLICATIONS, []);
+        setLocal(LOCAL_STORAGE_KEYS.APPLICATIONS, [saved, ...existing.filter(a => a.id !== saved.id)]);
+        return saved;
+      }
+    } catch (err) {
+      console.warn('[Supabase saveJobApplication exception]:', err);
+    }
   }
 
   const existing = getLocal<JobApplication[]>(LOCAL_STORAGE_KEYS.APPLICATIONS, []);
@@ -337,7 +530,11 @@ export async function saveJobApplication(app: Omit<JobApplication, 'id' | 'creat
 export async function updateJobApplication(app: JobApplication): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('job_applications').upsert(app);
+    try {
+      await supabase.from('job_applications').upsert(app);
+    } catch (err) {
+      console.warn('[Supabase updateJobApplication exception]:', err);
+    }
   }
   const existing = getLocal<JobApplication[]>(LOCAL_STORAGE_KEYS.APPLICATIONS, []);
   const updated = existing.map(a => a.id === app.id ? app : a);
@@ -347,7 +544,11 @@ export async function updateJobApplication(app: JobApplication): Promise<void> {
 export async function deleteJobApplication(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    await supabase.from('job_applications').delete().eq('id', id);
+    try {
+      await supabase.from('job_applications').delete().eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase deleteJobApplication exception]:', err);
+    }
   }
   const existing = getLocal<JobApplication[]>(LOCAL_STORAGE_KEYS.APPLICATIONS, []);
   setLocal(LOCAL_STORAGE_KEYS.APPLICATIONS, existing.filter(a => a.id !== id));

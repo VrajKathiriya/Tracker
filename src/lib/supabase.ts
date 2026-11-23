@@ -78,3 +78,46 @@ export function getSupabaseClient(): SupabaseClient | null {
     return null;
   }
 }
+
+export type SupabaseHealthStatus = 'connected' | 'permission_denied' | 'not_configured' | 'error';
+
+export interface HealthCheckResult {
+  status: SupabaseHealthStatus;
+  message?: string;
+  hint?: string;
+}
+
+export async function checkSupabaseHealth(): Promise<HealthCheckResult> {
+  if (!isSupabaseConfigured()) {
+    return { status: 'not_configured', message: 'Supabase credentials not configured' };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { status: 'error', message: 'Failed to create Supabase client' };
+  }
+
+  try {
+    const { data, error } = await client
+      .from('study_sessions')
+      .select('id')
+      .limit(1);
+
+    if (!error) {
+      return { status: 'connected', message: 'Connected to Supabase PostgreSQL database' };
+    }
+
+    if (error.code === '42501' || error.message?.toLowerCase().includes('permission denied')) {
+      return {
+        status: 'permission_denied',
+        message: 'Permission denied (42501): PostgreSQL table privileges not granted to anon role.',
+        hint: error.hint || 'GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;'
+      };
+    }
+
+    return { status: 'error', message: error.message };
+  } catch (err: any) {
+    return { status: 'error', message: err?.message || 'Unexpected connection error' };
+  }
+}
+

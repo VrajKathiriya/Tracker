@@ -201,3 +201,14 @@ ALTER TABLE weekly_reviews DISABLE ROW LEVEL SECURITY;
 ALTER TABLE roadmap_gates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE project_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE job_applications DISABLE ROW LEVEL SECURITY;
+
+-- Grant full schema and table permissions to Supabase API roles (anon, authenticated, service_role)
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+

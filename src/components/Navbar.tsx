@@ -14,7 +14,7 @@ import {
   AlertCircle,
   Calendar as CalendarIcon
 } from 'lucide-react';
-import { isSupabaseConfigured, ensureSupabaseConfig } from '@/lib/supabase';
+import { isSupabaseConfigured, ensureSupabaseConfig, checkSupabaseHealth, SupabaseHealthStatus } from '@/lib/supabase';
 import { SupabaseModal } from './SupabaseModal';
 
 export type ActiveTab = 
@@ -41,15 +41,19 @@ export function Navbar({
   onWeekChange,
   totalHoursCompleted 
 }: NavbarProps) {
-  const [supabaseConnected, setSupabaseConnected] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<SupabaseHealthStatus>('not_configured');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [todayFormatted, setTodayFormatted] = useState('');
 
+  const refreshHealth = async () => {
+    await ensureSupabaseConfig();
+    const res = await checkSupabaseHealth();
+    setHealthStatus(res.status);
+  };
+
   useEffect(() => {
     setTodayFormatted(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-    ensureSupabaseConfig().then(() => {
-      setSupabaseConnected(isSupabaseConfigured());
-    });
+    refreshHealth();
   }, []);
 
   const getPhaseName = (week: number) => {
@@ -116,20 +120,32 @@ export function Navbar({
               <button
                 onClick={() => setIsModalOpen(true)}
                 className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-all ${
-                  supabaseConnected
+                  healthStatus === 'connected'
                     ? 'bg-emerald-950/40 border-emerald-700/50 text-emerald-300 hover:bg-emerald-900/50'
+                    : healthStatus === 'permission_denied'
+                    ? 'bg-rose-950/40 border-rose-700/60 text-rose-300 hover:bg-rose-900/50'
                     : 'bg-amber-950/40 border-amber-700/50 text-amber-300 hover:bg-amber-900/50'
                 }`}
-                title={supabaseConnected ? 'Supabase connected' : 'Local storage mode - click to connect Supabase'}
+                title={
+                  healthStatus === 'connected'
+                    ? 'Supabase database live & sync ready'
+                    : healthStatus === 'permission_denied'
+                    ? 'Action needed: PostgreSQL permission denied (42501) - Click to fix'
+                    : 'Local storage mode - click to connect Supabase'
+                }
               >
                 <Database className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">
-                  {supabaseConnected ? 'Supabase Connected' : 'Local Storage'}
+                  {healthStatus === 'connected'
+                    ? 'Supabase Connected'
+                    : healthStatus === 'permission_denied'
+                    ? 'DB Permission Needed'
+                    : 'Local Storage'}
                 </span>
-                {supabaseConnected ? (
+                {healthStatus === 'connected' ? (
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 ) : (
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                  <AlertCircle className={`w-3.5 h-3.5 ${healthStatus === 'permission_denied' ? 'text-rose-400' : 'text-amber-400'}`} />
                 )}
               </button>
             </div>
@@ -164,8 +180,9 @@ export function Navbar({
           isOpen={isModalOpen} 
           onClose={() => {
             setIsModalOpen(false);
-            setSupabaseConnected(isSupabaseConfigured());
+            refreshHealth();
           }} 
+          onStatusChange={refreshHealth}
         />
       )}
     </>

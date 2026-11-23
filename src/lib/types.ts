@@ -13,6 +13,7 @@ export interface StudySession {
   session_date: string;
   category: StudyCategory;
   duration_minutes: number;
+  duration_seconds?: number;
   block_number?: 1 | 2 | 3 | 4;
   title?: string;
   notes?: string;

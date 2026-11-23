@@ -114,13 +114,26 @@ export function ActivityCalendar({
 
   // Selected Day data
   const selectedDaySessions = sessions.filter((s) => s.session_date === selectedDate);
-  const selectedDayMinutes = selectedDaySessions.reduce((acc, s) => acc + s.duration_minutes, 0);
-  const selectedDayHours = (selectedDayMinutes / 60).toFixed(1);
+  const selectedDayTotalSeconds = selectedDaySessions.reduce(
+    (acc, s) => acc + (s.duration_seconds !== undefined ? s.duration_seconds : s.duration_minutes * 60),
+    0
+  );
+  const selH = Math.floor(selectedDayTotalSeconds / 3600);
+  const selM = Math.floor((selectedDayTotalSeconds % 3600) / 60);
+  const selS = selectedDayTotalSeconds % 60;
+  const selectedDayTimeFormatted = `${selH}h ${selM}m ${selS}s`;
 
-  const blockMinutes = (blockNum: number) => {
+  const blockSeconds = (blockNum: number) => {
     return selectedDaySessions
       .filter((s) => s.block_number === blockNum)
-      .reduce((acc, s) => acc + s.duration_minutes, 0);
+      .reduce((acc, s) => acc + (s.duration_seconds !== undefined ? s.duration_seconds : s.duration_minutes * 60), 0);
+  };
+
+  const formatHMS = (totalSec: number) => {
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${h}h ${m}m ${s}s`;
   };
 
   const getIntensityClass = (minutes: number) => {
@@ -296,35 +309,37 @@ export function ActivityCalendar({
           </div>
 
           <div className="text-right">
-            <span className="text-xl font-bold font-mono text-emerald-400">{selectedDayHours}h</span>
+            <span className="text-xl sm:text-2xl font-bold font-mono text-emerald-400">
+              {selectedDayTimeFormatted}
+            </span>
             <span className="text-[11px] text-zinc-400 block font-normal">total practiced</span>
           </div>
         </div>
 
-        {/* 4 Block Breakdown for Selected Day */}
+        {/* 4 Block Breakdown for Selected Day (Hours, Minutes, Seconds) */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
             <span className="text-[10px] font-semibold text-amber-400 uppercase">Block 1: DSA</span>
             <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {(blockMinutes(1) / 60).toFixed(1)}h <span className="text-[10px] text-zinc-500">({blockMinutes(1)}m)</span>
+              {formatHMS(blockSeconds(1))}
             </div>
           </div>
           <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
             <span className="text-[10px] font-semibold text-blue-400 uppercase">Block 2: SysDesign</span>
             <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {(blockMinutes(2) / 60).toFixed(1)}h <span className="text-[10px] text-zinc-500">({blockMinutes(2)}m)</span>
+              {formatHMS(blockSeconds(2))}
             </div>
           </div>
           <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
             <span className="text-[10px] font-semibold text-emerald-400 uppercase">Block 3: Applied AI</span>
             <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {(blockMinutes(3) / 60).toFixed(1)}h <span className="text-[10px] text-zinc-500">({blockMinutes(3)}m)</span>
+              {formatHMS(blockSeconds(3))}
             </div>
           </div>
           <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
             <span className="text-[10px] font-semibold text-purple-400 uppercase">Block 4: Revision</span>
             <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {(blockMinutes(4) / 60).toFixed(1)}h <span className="text-[10px] text-zinc-500">({blockMinutes(4)}m)</span>
+              {formatHMS(blockSeconds(4))}
             </div>
           </div>
         </div>
@@ -360,7 +375,11 @@ export function ActivityCalendar({
 
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="font-mono text-[11px] text-zinc-300 font-semibold">
-                      {s.duration_minutes}m
+                      {s.duration_seconds !== undefined
+                        ? (s.duration_seconds >= 3600
+                            ? `${Math.floor(s.duration_seconds / 3600)}h ${Math.floor((s.duration_seconds % 3600) / 60)}m ${s.duration_seconds % 60}s`
+                            : `${Math.floor(s.duration_seconds / 60)}m ${s.duration_seconds % 60}s`)
+                        : `${s.duration_minutes}m`}
                     </span>
                     <button
                       onClick={() => handleDeleteSession(s.id)}

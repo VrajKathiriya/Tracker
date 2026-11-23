@@ -11,10 +11,14 @@ CREATE TABLE IF NOT EXISTS study_sessions (
     session_date DATE NOT NULL DEFAULT CURRENT_DATE,
     category TEXT NOT NULL CHECK (category IN ('dsa', 'system_design', 'applied_ai', 'core_cs', 'revision', 'mocks', 'other')),
     duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0),
+    duration_seconds INTEGER DEFAULT 0,
     block_number INTEGER CHECK (block_number IN (1, 2, 3, 4)),
     title TEXT,
     notes TEXT
 );
+
+-- Upgrade existing table if needed
+ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0;
 
 -- Index for date queries
 CREATE INDEX IF NOT EXISTS idx_study_sessions_date ON study_sessions(session_date);

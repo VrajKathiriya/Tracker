@@ -46,7 +46,10 @@ ALTER TABLE system_design_log DISABLE ROW LEVEL SECURITY;
 ALTER TABLE weekly_reviews DISABLE ROW LEVEL SECURITY;
 ALTER TABLE roadmap_gates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE project_milestones DISABLE ROW LEVEL SECURITY;
-ALTER TABLE job_applications DISABLE ROW LEVEL SECURITY;`;
+ALTER TABLE job_applications DISABLE ROW LEVEL SECURITY;
+
+-- 5. Add duration_seconds column for precise seconds tracking
+ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0;`;
 
 export function SupabaseModal({ isOpen, onClose, onStatusChange }: SupabaseModalProps) {
   const [url, setUrl] = useState('');

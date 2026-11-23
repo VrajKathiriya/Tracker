@@ -124,7 +124,7 @@ export default function Home() {
             {activeTab === 'timer' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-7 space-y-6">
-                  <ActiveTimer onSessionLogged={loadData} />
+                  <ActiveTimer sessions={sessions} onSessionLogged={loadData} />
                   <HoursAnalytics
                     sessions={sessions}
                     onSessionDeleted={loadData}

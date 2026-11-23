@@ -64,7 +64,12 @@ export async function fetchStudySessions(): Promise<StudySession[]> {
         if (unsynced.length > 0) {
           console.info(`[Storage] Auto-syncing ${unsynced.length} local session(s) to Supabase...`);
           try {
-            await supabase.from('study_sessions').insert(unsynced);
+            const { error: pushErr } = await supabase.from('study_sessions').insert(unsynced);
+            if (pushErr && (pushErr.code === 'PGRST204' || pushErr.message?.includes('duration_seconds'))) {
+              // Schema does not yet have duration_seconds, retry without it
+              const sanitized = unsynced.map(({ duration_seconds, ...rest }) => rest);
+              await supabase.from('study_sessions').insert(sanitized);
+            }
             cloudSessions.push(...unsynced);
             cloudSessions.sort((a, b) => b.session_date.localeCompare(a.session_date));
           } catch (syncErr) {
@@ -97,14 +102,26 @@ export async function saveStudySession(session: Omit<StudySession, 'id' | 'creat
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('study_sessions')
         .insert([newSession])
         .select()
         .single();
 
+      // If Postgres table in Supabase doesn't have duration_seconds column yet, retry without it
+      if (error && (error.code === 'PGRST204' || error.message?.includes('duration_seconds'))) {
+        const { duration_seconds, ...withoutSeconds } = newSession;
+        const retry = await supabase
+          .from('study_sessions')
+          .insert([withoutSeconds])
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
+
       if (!error && data) {
-        const saved = data as StudySession;
+        const saved = { ...newSession, ...data } as StudySession;
         const existing = getLocal<StudySession[]>(LOCAL_STORAGE_KEYS.SESSIONS, []);
         const updated = [saved, ...existing.filter(s => s.id !== saved.id)];
         setLocal(LOCAL_STORAGE_KEYS.SESSIONS, updated);

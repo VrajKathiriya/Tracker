@@ -273,7 +273,9 @@ export function HoursAnalytics({ sessions, onSessionDeleted, currentWeek }: Hour
                       {s.notes && <div className="text-[11px] text-zinc-400 line-clamp-1">{s.notes}</div>}
                     </td>
                     <td className="py-2.5 font-mono text-right text-zinc-100 whitespace-nowrap">
-                      {s.duration_minutes}m ({(s.duration_minutes / 60).toFixed(1)}h)
+                      {s.duration_seconds !== undefined && s.duration_seconds > 0
+                        ? `${Math.floor(s.duration_seconds / 60)}m ${s.duration_seconds % 60}s (${(s.duration_seconds / 3600).toFixed(2)}h)`
+                        : `${s.duration_minutes}m (${(s.duration_minutes / 60).toFixed(1)}h)`}
                     </td>
                     <td className="py-2.5 text-right whitespace-nowrap">
                       <button

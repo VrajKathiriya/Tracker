@@ -16,10 +16,12 @@ import {
 import { DAILY_BLOCKS, DailyBlockConfig } from '@/lib/roadmap-data';
 import { StudySession } from '@/lib/types';
 import { saveStudySession, updateStudySession } from '@/lib/storage';
+import { ActiveTab } from './Navbar';
 
 interface ActiveTimerProps {
   sessions: StudySession[];
   onSessionLogged: () => void;
+  onNavigateTab?: (tab: ActiveTab) => void;
 }
 
 const STOPWATCH_STORAGE_KEY = 'roadmap_stopwatch_state_v3';
@@ -31,7 +33,7 @@ interface PersistedStopwatchState {
   sessionDate: string;
 }
 
-export function ActiveTimer({ sessions, onSessionLogged }: ActiveTimerProps) {
+export function ActiveTimer({ sessions, onSessionLogged, onNavigateTab }: ActiveTimerProps) {
   const [selectedBlock, setSelectedBlock] = useState<DailyBlockConfig>(DAILY_BLOCKS[0]);
   const [todayStr, setTodayStr] = useState<string>('');
   
@@ -424,6 +426,52 @@ export function ActiveTimer({ sessions, onSessionLogged }: ActiveTimerProps) {
             </button>
           )}
         </div>
+
+        {/* Contextual Quick Links to Curated Resources / Mistakes Queue */}
+        {onNavigateTab && (
+          <div className="mt-4 pt-3 border-t border-zinc-900 flex items-center justify-center text-xs">
+            {selectedBlock.blockNumber === 1 && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('mistakes')}
+                className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-amber-400 transition cursor-pointer"
+              >
+                <span>🔥 Review Mistakes Log &amp; Problem Patterns</span>
+                <span>&rarr;</span>
+              </button>
+            )}
+            {selectedBlock.blockNumber === 2 && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('system_design')}
+                className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-blue-400 transition cursor-pointer"
+              >
+                <span>📚 Explore System Design Roadmap &amp; Curated Resources</span>
+                <span>&rarr;</span>
+              </button>
+            )}
+            {selectedBlock.blockNumber === 3 && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('projects')}
+                className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-indigo-400 transition cursor-pointer"
+              >
+                <span>🚀 Explore Applied AI Roadmap &amp; Curated Resources</span>
+                <span>&rarr;</span>
+              </button>
+            )}
+            {selectedBlock.blockNumber === 4 && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('gates')}
+                className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-purple-400 transition cursor-pointer"
+              >
+                <span>🎯 Check Readiness Gates &amp; Milestones</span>
+                <span>&rarr;</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Optional Notes Modal (Triggered automatically on Pause) */}

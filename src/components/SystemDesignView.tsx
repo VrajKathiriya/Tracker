@@ -10,10 +10,13 @@ import {
   Code, 
   X, 
   FileText,
-  ListOrdered
+  ListOrdered,
+  BookOpen,
+  Compass
 } from 'lucide-react';
 import { SystemDesignLog, DesignType } from '@/lib/types';
 import { saveSystemDesignLog } from '@/lib/storage';
+import { ResourcesVault } from './ResourcesVault';
 
 interface SystemDesignViewProps {
   logs: SystemDesignLog[];
@@ -45,6 +48,7 @@ const COMMON_DESIGNS = [
 ];
 
 export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
+  const [activeSubTab, setActiveSubTab] = useState<'resources' | 'practice'>('resources');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [designType, setDesignType] = useState<DesignType>('HLD');
@@ -92,26 +96,72 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header and Stats */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-          <div>
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-400" />
-              <span>System Design &amp; LLD Practice Log</span>
-            </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Target: 15+ HLD designs &amp; 10+ LLD problems timed under 45/90 minutes with trade-offs.
-            </p>
-          </div>
+      {/* View Switcher: Resources & Roadmap vs Practice Log */}
+      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveSubTab('resources')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+              activeSubTab === 'resources'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Curated Roadmap &amp; Resources</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30 font-mono">
+              10
+            </span>
+          </button>
 
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs-600/30 transition self-start sm:self-auto"
+            onClick={() => setActiveSubTab('practice')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+              activeSubTab === 'practice'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+            }`}
           >
-            <Plus className="w-4 h-4" /> Log Design Session
+            <Layers className="w-4 h-4" />
+            <span>Design Practice Log &amp; Checklists</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-300 font-mono">
+              {logs.length}
+            </span>
           </button>
         </div>
+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium text-xs transition shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5" /> Log Session
+        </button>
+      </div>
+
+      {activeSubTab === 'resources' ? (
+        <ResourcesVault category="system_design" />
+      ) : (
+        <>
+          {/* Header and Stats */}
+          <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+              <div>
+                <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  <span>System Design &amp; LLD Practice Log</span>
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Target: 15+ HLD designs &amp; 10+ LLD problems timed under 45/90 minutes with trade-offs.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4" /> Log Design Session
+              </button>
+            </div>
 
         {/* Counter Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
@@ -228,6 +278,8 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Modal */}
       {isModalOpen && (
@@ -334,7 +386,7 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-600/30"
+                  className="px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-500 transition"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Design Log'}
                 </button>

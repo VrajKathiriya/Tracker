@@ -108,9 +108,9 @@ export function SystemDesignView({ logs, onRefresh }: SystemDesignViewProps) {
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Curated Roadmap &amp; Resources</span>
+            <span>Phase-Wise Roadmap &amp; Resources</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30 font-mono">
-              10
+              9 Steps
             </span>
           </button>
 

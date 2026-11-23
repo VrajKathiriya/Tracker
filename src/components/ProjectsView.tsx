@@ -163,9 +163,9 @@ export function ProjectsView({ projects, onRefresh }: ProjectsViewProps) {
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Curated Roadmap &amp; Resource Vault</span>
+            <span>Phase-Wise Roadmap &amp; Resources</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-300 font-mono">
-              10
+              10 Steps
             </span>
           </button>
         </div>

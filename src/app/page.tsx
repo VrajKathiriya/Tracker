@@ -123,7 +123,7 @@ export default function Home() {
           <div className="space-y-6 animate-fadeIn">
             {activeTab === 'timer' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                <div className="lg:col-span-7 space-y-6">
+                <div className="lg:col-span-8 space-y-6">
                   <ActiveTimer sessions={sessions} onSessionLogged={loadData} />
                   <HoursAnalytics
                     sessions={sessions}
@@ -131,7 +131,7 @@ export default function Home() {
                     currentWeek={currentWeek}
                   />
                 </div>
-                <div className="lg:col-span-5 space-y-6">
+                <div className="lg:col-span-4 space-y-6">
                   <ActivityCalendar
                     sessions={sessions}
                     selectedDate={selectedDate}

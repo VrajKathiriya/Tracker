@@ -289,7 +289,7 @@ export function ActiveTimer({ sessions, onSessionLogged }: ActiveTimerProps) {
         </div>
       </div>
 
-      {/* 4 Daily Blocks Selector with Direct Hours, Minutes, Seconds */}
+      {/* 4 Daily Blocks Selector with Conic Progress Borders */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 my-4">
         {DAILY_BLOCKS.map((block) => {
           const isSelected = selectedBlock.blockNumber === block.blockNumber;
@@ -301,45 +301,72 @@ export function ActiveTimer({ sessions, onSessionLogged }: ActiveTimerProps) {
           const bS = blockSec % 60;
           const blockTimeStr = `${bH}h ${bM}m ${bS}s`;
 
-          return (
-            <button
-              key={block.blockNumber}
-              onClick={() => handleSelectBlock(block)}
-              className={`p-3 rounded-lg border text-left transition-colors cursor-pointer flex flex-col justify-between ${
-                isSelected
-                  ? 'bg-zinc-800 border-zinc-600 text-white'
-                  : 'bg-zinc-950/60 border-zinc-800/80 hover:bg-zinc-850 hover:border-zinc-700'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wide">
-                    Block {block.blockNumber}
-                  </span>
-                  {getBlockIcon(block.blockNumber)}
-                </div>
-                <div className="text-xs font-semibold text-zinc-100 truncate">
-                  {block.title.replace(`Block ${block.blockNumber}: `, '')}
-                </div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">
-                  {block.timeDescription}
-                </div>
-              </div>
+          // Progress percentage towards daily block target (e.g. 1.5h / 3h = 50%)
+          const targetSec = block.targetMinutes * 60;
+          const progressPercent = Math.min(100, Math.max(0, (blockSec / targetSec) * 100));
 
-              {/* Directly visible Daily Time: Hours, Minutes, Seconds */}
-              <div className="mt-2.5 pt-1.5 border-t border-zinc-800/80 flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400 font-medium">Today:</span>
-                <span className={`text-xs font-mono font-bold ${
-                  isRunningHere 
-                    ? 'text-emerald-400 animate-pulse' 
-                    : blockSec > 0 
-                    ? 'text-emerald-400' 
-                    : 'text-zinc-500'
-                }`}>
-                  {blockTimeStr}
-                </span>
-              </div>
-            </button>
+          // Conic border: starts at 0deg (middle of top border), reaches 180deg (middle of bottom border) at 50%
+          const baseBorderColor = isSelected ? '#3f3f46' : '#27272a';
+          const borderStyle: React.CSSProperties = progressPercent > 0
+            ? {
+                background: `conic-gradient(from 0deg at 50% 50%, #047857 0%, #059669 ${progressPercent}%, ${baseBorderColor} ${progressPercent}%, ${baseBorderColor} 100%)`
+              }
+            : {
+                backgroundColor: baseBorderColor
+              };
+
+          return (
+            <div
+              key={block.blockNumber}
+              className="p-[1.5px] rounded-xl transition-all"
+              style={borderStyle}
+            >
+              <button
+                type="button"
+                onClick={() => handleSelectBlock(block)}
+                className={`w-full h-full p-3 rounded-[10.5px] text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                  isSelected
+                    ? 'bg-zinc-800 text-white'
+                    : 'bg-zinc-950 hover:bg-zinc-900/90'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wide">
+                      Block {block.blockNumber}
+                    </span>
+                    {getBlockIcon(block.blockNumber)}
+                  </div>
+                  <div className="text-xs font-semibold text-zinc-100 truncate">
+                    {block.title.replace(`Block ${block.blockNumber}: `, '')}
+                  </div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">
+                    {block.timeDescription}
+                  </div>
+                </div>
+
+                {/* Directly visible Daily Time & Progress */}
+                <div className="mt-2.5 pt-1.5 border-t border-zinc-800/80 flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-400 font-medium">Today:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs font-mono font-bold ${
+                      isRunningHere 
+                        ? 'text-emerald-400 animate-pulse' 
+                        : blockSec > 0 
+                        ? 'text-emerald-400' 
+                        : 'text-zinc-500'
+                    }`}>
+                      {blockTimeStr}
+                    </span>
+                    {progressPercent > 0 && (
+                      <span className="text-[10px] text-emerald-500/80 font-mono font-medium">
+                        ({Math.round(progressPercent)}%)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            </div>
           );
         })}
       </div>

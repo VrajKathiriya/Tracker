@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { StudySession, StudyCategory } from '@/lib/types';
 import { deleteStudySession } from '@/lib/storage';
+import { DAILY_BLOCKS } from '@/lib/roadmap-data';
 
 interface ActivityCalendarProps {
   sessions: StudySession[];
@@ -316,32 +317,65 @@ export function ActivityCalendar({
           </div>
         </div>
 
-        {/* 4 Block Breakdown for Selected Day (Hours, Minutes, Seconds) */}
+        {/* 4 Block Breakdown for Selected Day (with Conic Progress Borders) */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-            <span className="text-[10px] font-semibold text-amber-400 uppercase">Block 1: DSA</span>
-            <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {formatHMS(blockSeconds(1))}
-            </div>
-          </div>
-          <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-            <span className="text-[10px] font-semibold text-blue-400 uppercase">Block 2: SysDesign</span>
-            <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {formatHMS(blockSeconds(2))}
-            </div>
-          </div>
-          <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-            <span className="text-[10px] font-semibold text-emerald-400 uppercase">Block 3: Applied AI</span>
-            <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {formatHMS(blockSeconds(3))}
-            </div>
-          </div>
-          <div className="p-2.5 bg-zinc-950/70 border border-zinc-800/80 rounded-xl">
-            <span className="text-[10px] font-semibold text-purple-400 uppercase">Block 4: Revision</span>
-            <div className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
-              {formatHMS(blockSeconds(4))}
-            </div>
-          </div>
+          {DAILY_BLOCKS.map((block) => {
+            const bSec = blockSeconds(block.blockNumber);
+            const targetSec = block.targetMinutes * 60;
+            const pct = Math.min(100, Math.max(0, (bSec / targetSec) * 100));
+            const baseBorder = '#27272a';
+            const conicBorder: React.CSSProperties = pct > 0
+              ? {
+                  background: `conic-gradient(from 0deg at 50% 50%, #047857 0%, #059669 ${pct}%, ${baseBorder} ${pct}%, ${baseBorder} 100%)`
+                }
+              : {
+                  backgroundColor: baseBorder
+                };
+
+            const getBlockCategoryColor = (num: number) => {
+              switch (num) {
+                case 1: return 'text-amber-400';
+                case 2: return 'text-blue-400';
+                case 3: return 'text-emerald-400';
+                case 4: return 'text-purple-400';
+                default: return 'text-zinc-400';
+              }
+            };
+
+            const getShortCategoryName = (cat: string) => {
+              switch (cat) {
+                case 'dsa': return 'DSA';
+                case 'system_design': return 'SysDesign';
+                case 'applied_ai': return 'Applied AI';
+                case 'revision': return 'Revision';
+                default: return 'Practice';
+              }
+            };
+
+            return (
+              <div
+                key={block.blockNumber}
+                className="p-[1.5px] rounded-xl transition-all"
+                style={conicBorder}
+              >
+                <div className="p-2.5 bg-zinc-950 rounded-[10px] h-full flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] font-semibold uppercase ${getBlockCategoryColor(block.blockNumber)} truncate`}>
+                      B{block.blockNumber}: {getShortCategoryName(block.category)}
+                    </span>
+                    {pct > 0 && (
+                      <span className="text-[9px] font-mono font-medium text-emerald-400 shrink-0 ml-1">
+                        {Math.round(pct)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm font-bold font-mono text-zinc-100 mt-1">
+                    {formatHMS(bSec)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Sessions list for this day */}
